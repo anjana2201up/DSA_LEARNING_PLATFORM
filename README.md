@@ -1,6 +1,6 @@
 # DSA Nexus
 
-A W3Schools-style learning platform for Data Structures & Algorithms —
+A learning platform for Data Structures & Algorithms —
 basic to advanced — built with **Node.js, Express, HTML, CSS, and
 vanilla JavaScript only** (no frontend framework, no build step).
 
