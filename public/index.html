@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Learn Data Structures & Algorithms</title>
+<meta name="description" content="Learn Data Structures & Algorithms from basic to advanced, with visual diagrams and a live JavaScript compiler." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+  // Applied synchronously, before first paint, to avoid a flash of the wrong theme.
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { /* localStorage unavailable — default dark stays */ }
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <a href="#/" class="brand">
+    <span class="brand-mark">&lt;/&gt;</span>
+    <span class="brand-name">DSA <em>Nexus</em></span>
+  </a>
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="Search topics… e.g. binary search, heap, DP" autocomplete="off" />
+    <div id="searchResults" class="search-results hidden"></div>
+  </div>
+  <a href="#/" class="topbar-link">Home</a>
+  <a href="#/bookmarks" class="topbar-link" id="bookmarksLink">★ Saved</a>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+    <span class="theme-icon-dark">🌙</span>
+    <span class="theme-icon-light">☀️</span>
+  </button>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-scroll" id="sidebarContent">
+      <!-- populated by app.js -->
+    </div>
+  </nav>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <main class="content" id="content">
+    <!-- populated by app.js -->
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>DSA Nexus — built with Node.js, Express, HTML, CSS &amp; vanilla JS. Diagrams are original SVGs, not sourced from third parties.</p>
+</footer>
+
+<script src="/js/progress.js"></script>
+<script src="/js/highlight.js"></script>
+<script src="/js/background.js"></script>
+<script src="/js/diagrams.js"></script>
+<script src="/js/compiler.js"></script>
+<script src="/js/slides.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

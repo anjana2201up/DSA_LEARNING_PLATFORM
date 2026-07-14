@@ -1,0 +1,21 @@
+{
+  "name": "dsa-nexus",
+  "version": "1.0.0",
+  "description": "DSA Nexus - a W3Schools-style learning platform for Data Structures & Algorithms, basic to advanced, with a built-in JavaScript compiler.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "compression": "^1.7.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
