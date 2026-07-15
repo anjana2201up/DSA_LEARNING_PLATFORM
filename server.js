@@ -90,8 +90,12 @@ app.get(["/app", "/app/*"], (req, res) => res.sendFile(path.join(__dirname, "pub
 
 app.get("*", (req, res) => res.redirect("/"));
 
-app.listen(PORT, () => {
-  console.log(`DSA Nexus running at http://localhost:${PORT}`);
-  console.log(`Languages available for the terminal: ${Object.entries(AVAILABLE).filter(([, v]) => v).map(([k]) => k).join(", ")}`);
-  if (!process.env.GOOGLE_CLIENT_ID) console.log(`Google Sign-In: disabled (set GOOGLE_CLIENT_ID in .env to enable)`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`DSA Nexus running at http://localhost:${PORT}`);
+    console.log(`Languages available for the terminal: ${Object.entries(AVAILABLE).filter(([, v]) => v).map(([k]) => k).join(", ")}`);
+    if (!process.env.GOOGLE_CLIENT_ID) console.log(`Google Sign-In: disabled (set GOOGLE_CLIENT_ID in .env to enable)`);
+  });
+}
+
+module.exports = app;
