@@ -3,6 +3,7 @@ const express = require("express");
 const store = require("../lib/userStore");
 const { requireAuth } = require("../middleware/auth");
 const { TOPICS } = require("../data/topics");
+const { PROBLEMS } = require("../data/problems");
 
 const router = express.Router();
 
@@ -40,12 +41,25 @@ function buildStats(user) {
     byCategory[t.category].total++;
     if (user.progress.completed.includes(t.id)) byCategory[t.category].done++;
   }
+
+  // Problem difficulty breakdown
+  const difficulties = { easy: { total: 0, solved: 0 }, medium: { total: 0, solved: 0 }, hard: { total: 0, solved: 0 } };
+  for (const p of PROBLEMS) {
+    const d = p.difficulty || "easy";
+    if (difficulties[d]) {
+      difficulties[d].total++;
+      if (user.progress.solvedProblems.includes(p.id)) difficulties[d].solved++;
+    }
+  }
+
   return {
     totalTopics,
     completedCount,
     percentComplete: totalTopics ? Math.round((completedCount / totalTopics) * 100) : 0,
     bookmarkCount: user.progress.bookmarks.length,
     solvedProblemCount: user.progress.solvedProblems.length,
+    totalProblems: PROBLEMS.length,
+    difficulties,
     byCategory,
     memberSince: user.createdAt
   };

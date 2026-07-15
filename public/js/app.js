@@ -459,112 +459,256 @@ async function renderDashboard() {
   const recent = Object.entries(user.progress.completedAt || {})
     .sort((a, b) => new Date(b[1]) - new Date(a[1])).slice(0, 8);
 
+  // Build heatmap data (last 20 weeks)
+  const heatmapWeeks = 20;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const dayMs = 86400000;
+  // Start from the most recent Sunday, then go back heatmapWeeks weeks
+  const todayDay = today.getDay(); // 0=Sun
+  const endDate = new Date(today.getTime());
+  const startDate = new Date(endDate.getTime() - ((heatmapWeeks * 7 - 1 + todayDay) * dayMs));
+  startDate.setHours(0,0,0,0);
+
+  // Count activities per day
+  const activityMap = {};
+  const allTimestamps = Object.values(user.progress.completedAt || {});
+  for (const ts of allTimestamps) {
+    const d = new Date(ts);
+    d.setHours(0,0,0,0);
+    const key = d.toISOString().slice(0,10);
+    activityMap[key] = (activityMap[key] || 0) + 1;
+  }
+
+  // Generate heatmap cells grouped by week (column) then day (row)
+  let heatmapCells = "";
+  const totalDays = heatmapWeeks * 7 + todayDay + 1;
+  const cellStart = new Date(startDate.getTime());
+  // Align to Sunday
+  cellStart.setDate(cellStart.getDate() - cellStart.getDay());
+  for (let d = 0; d < totalDays; d++) {
+    const cellDate = new Date(cellStart.getTime() + d * dayMs);
+    const key = cellDate.toISOString().slice(0,10);
+    const count = activityMap[key] || 0;
+    const isFuture = cellDate > today;
+    let level = 0;
+    if (count === 1) level = 1;
+    else if (count === 2) level = 2;
+    else if (count >= 3) level = 3;
+    heatmapCells += `<div class="lc-heatmap-cell lc-heat-${isFuture ? 'empty' : level}" title="${key}: ${count} activities"></div>`;
+  }
+
+  // Streak calculation
+  let currentStreak = 0;
+  let checkDate = new Date(today.getTime());
+  while (true) {
+    const key = checkDate.toISOString().slice(0,10);
+    if (activityMap[key]) { currentStreak++; checkDate.setDate(checkDate.getDate() - 1); }
+    else break;
+  }
+
+  const diff = stats.difficulties || { easy: {total:0,solved:0}, medium: {total:0,solved:0}, hard: {total:0,solved:0} };
+  const totalProblems = stats.totalProblems || (diff.easy.total + diff.medium.total + diff.hard.total);
+
   contentEl.innerHTML = `
-    <div class="dash-header">
-      <div class="dash-avatar">${user.avatar || "🧑‍💻"}</div>
-      <div>
-        <div class="dash-name-row">
-          <h1>${user.name}</h1>
-          <button class="dash-edit-btn" id="editProfileBtn" type="button">Edit</button>
+    <!-- Profile Header -->
+    <div class="lc-profile-header">
+      <div class="lc-profile-left">
+        <div class="lc-avatar">${user.avatar || "🧑‍💻"}</div>
+        <div class="lc-profile-info">
+          <div class="lc-name-row">
+            <h1 class="lc-username">${user.name}</h1>
+            <button class="lc-edit-btn" id="editProfileBtn" type="button">✏️ Edit</button>
+          </div>
+          <div class="lc-meta">${user.email}</div>
+          <div class="lc-meta">Member since ${new Date(user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
         </div>
-        <div class="dash-email">${user.email} · member since ${new Date(user.createdAt).toLocaleDateString()}</div>
       </div>
-      <button class="btn btn-ghost dash-signout" id="signOutBtn" type="button">Sign out</button>
+      <div class="lc-profile-right">
+        <div class="lc-rank-badge">
+          <span class="lc-rank-icon">⭐</span>
+          <div>
+            <div class="lc-rank-label">Current Streak</div>
+            <div class="lc-rank-value">${currentStreak} day${currentStreak !== 1 ? "s" : ""}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost dash-signout" id="signOutBtn" type="button">Sign out</button>
+      </div>
     </div>
 
-    <div id="editProfilePanel" style="display:none; margin-bottom:26px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
-      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Display name</label>
-      <input id="editNameInput" type="text" value="${user.name}" style="width:100%; margin:8px 0 14px; padding:9px 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text);" />
-      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Avatar</label>
+    <!-- Edit Profile Panel -->
+    <div id="editProfilePanel" class="lc-edit-panel" style="display:none;">
+      <label class="lc-edit-label">Display name</label>
+      <input id="editNameInput" type="text" value="${user.name}" class="lc-edit-input" />
+      <label class="lc-edit-label">Avatar</label>
       <div class="avatar-picker">
         ${AVATAR_CHOICES.map(a => `<span class="avatar-option ${a === user.avatar ? "selected" : ""}" data-avatar="${a}">${a}</span>`).join("")}
       </div>
       <button class="btn btn-primary" id="saveProfileBtn" type="button">Save changes</button>
     </div>
 
-    <div class="dash-stat-grid">
-      <div class="dash-stat-card"><b>${stats.percentComplete}%</b><span>Overall progress</span></div>
-      <div class="dash-stat-card"><b>${stats.completedCount}/${stats.totalTopics}</b><span>Topics completed</span></div>
-      <div class="dash-stat-card"><b>${stats.bookmarkCount}</b><span>Saved topics</span></div>
-      <div class="dash-stat-card"><b>${stats.solvedProblemCount}/18</b><span>Problems solved</span></div>
+    <!-- Stat Cards Row -->
+    <div class="lc-stat-row">
+      <div class="lc-stat-card lc-stat-accent">
+        <div class="lc-stat-number">${stats.percentComplete}%</div>
+        <div class="lc-stat-label">Overall Progress</div>
+        <div class="lc-stat-bar"><div class="lc-stat-bar-fill" style="width:${stats.percentComplete}%"></div></div>
+      </div>
+      <div class="lc-stat-card">
+        <div class="lc-stat-number">${stats.completedCount}<span class="lc-stat-total">/${stats.totalTopics}</span></div>
+        <div class="lc-stat-label">Topics Completed</div>
+      </div>
+      <div class="lc-stat-card">
+        <div class="lc-stat-number">${stats.solvedProblemCount}<span class="lc-stat-total">/${totalProblems}</span></div>
+        <div class="lc-stat-label">Problems Solved</div>
+      </div>
+      <div class="lc-stat-card">
+        <div class="lc-stat-number">${stats.bookmarkCount}</div>
+        <div class="lc-stat-label">Bookmarks</div>
+      </div>
     </div>
 
-    <div style="display:flex; flex-wrap:wrap; gap:20px; margin-bottom:34px;">
-      <div style="flex:1; min-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
-        <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Progress by track</h2>
-        <canvas id="progressChart" width="400" height="200"></canvas>
+    <!-- Charts Row: Doughnut + Bar -->
+    <div class="lc-charts-row">
+      <div class="lc-chart-card lc-doughnut-card">
+        <h2 class="lc-section-title">Problem Solving</h2>
+        <div class="lc-doughnut-wrap">
+          <canvas id="difficultyChart" width="220" height="220"></canvas>
+          <div class="lc-doughnut-center">
+            <div class="lc-doughnut-num">${stats.solvedProblemCount}</div>
+            <div class="lc-doughnut-sub">Solved</div>
+          </div>
+        </div>
+        <div class="lc-diff-legend">
+          <div class="lc-diff-item"><span class="lc-diff-dot" style="background:#00B8A3;"></span>Easy <b>${diff.easy.solved}/${diff.easy.total}</b></div>
+          <div class="lc-diff-item"><span class="lc-diff-dot" style="background:#FFC01E;"></span>Medium <b>${diff.medium.solved}/${diff.medium.total}</b></div>
+          <div class="lc-diff-item"><span class="lc-diff-dot" style="background:#FF375F;"></span>Hard <b>${diff.hard.solved}/${diff.hard.total}</b></div>
+        </div>
       </div>
-      <div style="flex:1; min-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
-        <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Recent activity</h2>
-        ${recent.length ? `<ul class="activity-list">
+      <div class="lc-chart-card lc-bar-card">
+        <h2 class="lc-section-title">Topic Progress by Track</h2>
+        <canvas id="progressChart" width="400" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Activity Heatmap -->
+    <div class="lc-heatmap-card">
+      <h2 class="lc-section-title">📅 Activity Heatmap <span class="lc-heatmap-subtitle">(last ${heatmapWeeks} weeks)</span></h2>
+      <div class="lc-heatmap-grid" style="grid-template-columns: repeat(${Math.ceil(totalDays/7)}, 1fr);">${heatmapCells}</div>
+      <div class="lc-heatmap-legend">
+        <span class="lc-heatmap-leg-label">Less</span>
+        <div class="lc-heatmap-cell lc-heat-0"></div>
+        <div class="lc-heatmap-cell lc-heat-1"></div>
+        <div class="lc-heatmap-cell lc-heat-2"></div>
+        <div class="lc-heatmap-cell lc-heat-3"></div>
+        <span class="lc-heatmap-leg-label">More</span>
+      </div>
+    </div>
+
+    <!-- Two-column: Recent Activity + Leaderboard -->
+    <div class="lc-bottom-row">
+      <div class="lc-chart-card">
+        <h2 class="lc-section-title">📝 Recent Activity</h2>
+        ${recent.length ? `<ul class="lc-activity-list">
           ${recent.map(([topicId, ts]) => {
             const t = state.topics.find(x => x.id === topicId);
-            return `<li><a href="#/topic/${topicId}">${t ? t.title : topicId}</a><span class="act-date">${new Date(ts).toLocaleDateString()}</span></li>`;
+            return `<li class="lc-activity-item"><span class="lc-activity-check">✓</span><a href="#/topic/${topicId}">${t ? t.title : topicId}</a><span class="lc-activity-date">${new Date(ts).toLocaleDateString()}</span></li>`;
           }).join("")}
-        </ul>` : `<p style="color:var(--text-muted);">Nothing completed yet.</p>`}
+        </ul>` : `<p style="color:var(--text-muted);">Nothing completed yet — head to <a href="#/" style="color:var(--accent);">the topics</a> and start learning!</p>`}
       </div>
-    </div>
-
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:34px;">
-      <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">🏆 Global Leaderboard</h2>
-      <div id="leaderboardHost"><p style="color:var(--text-muted);">Loading leaderboard...</p></div>
+      <div class="lc-chart-card">
+        <h2 class="lc-section-title">🏆 Global Leaderboard</h2>
+        <div id="leaderboardHost"><p style="color:var(--text-muted);">Loading leaderboard...</p></div>
+      </div>
     </div>
   `;
 
-  const ctx = document.getElementById('progressChart').getContext('2d');
-  const catLabels = [];
-  const catData = [];
-  state.categories.forEach(cat => {
-    const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
-    catLabels.push(cat.label);
-    catData.push(c.done);
-  });
-  new Chart(ctx, {
-    type: 'bar',
+  // --- Doughnut Chart (Problem Difficulty) ---
+  const dctx = document.getElementById('difficultyChart').getContext('2d');
+  const solvedData = [diff.easy.solved, diff.medium.solved, diff.hard.solved];
+  const unsolvedTotal = totalProblems - stats.solvedProblemCount;
+  new Chart(dctx, {
+    type: 'doughnut',
     data: {
-      labels: catLabels,
+      labels: ['Easy', 'Medium', 'Hard', 'Unsolved'],
       datasets: [{
-        label: 'Topics Completed',
-        data: catData,
-        backgroundColor: '#4A90E2',
-        borderRadius: 4
+        data: [...solvedData, Math.max(unsolvedTotal, 0)],
+        backgroundColor: ['#00B8A3', '#FFC01E', '#FF375F', 'rgba(255,255,255,0.06)'],
+        borderWidth: 0,
+        hoverOffset: 6
       }]
     },
     options: {
       responsive: true,
-      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+      cutout: '75%',
       plugins: {
-        legend: { labels: { color: 'gray' } }
+        legend: { display: false },
+        tooltip: {
+          filter: (item) => item.dataIndex < 3
+        }
       }
     }
   });
 
+  // --- Bar Chart (Topics by Category) ---
+  const bctx = document.getElementById('progressChart').getContext('2d');
+  const catLabels = [];
+  const catDone = [];
+  const catTotal = [];
+  state.categories.forEach(cat => {
+    const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
+    catLabels.push(cat.label);
+    catDone.push(c.done);
+    catTotal.push(c.total - c.done);
+  });
+  new Chart(bctx, {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [
+        { label: 'Completed', data: catDone, backgroundColor: '#00B8A3', borderRadius: 4 },
+        { label: 'Remaining', data: catTotal, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true, ticks: { color: 'gray', font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: 'gray' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      },
+      plugins: { legend: { labels: { color: 'gray', font: { size: 11 } } } }
+    }
+  });
+
+  // --- Leaderboard ---
   fetch('/api/me/leaderboard')
     .then(res => res.json())
-    .then(data => {
+    .then(lb => {
       const host = document.getElementById('leaderboardHost');
-      if (!data.leaderboard || data.leaderboard.length === 0) {
-        host.innerHTML = `<p style="color:var(--text-muted);">No users ranked yet.</p>`;
+      if (!lb.leaderboard || lb.leaderboard.length === 0) {
+        host.innerHTML = `<p style="color:var(--text-muted);">No users ranked yet. Be the first!</p>`;
         return;
       }
+      const medals = ['🥇','🥈','🥉'];
       host.innerHTML = `
-        <table style="width:100%; text-align:left; border-collapse:collapse;">
-          <tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;">Rank</th><th style="padding:8px;">User</th><th style="padding:8px;">Solved</th><th style="padding:8px;">Topics</th></tr>
-          ${data.leaderboard.map((u, i) => `
-            <tr style="border-bottom:1px solid var(--border-light);">
-              <td style="padding:8px; font-weight:bold; color:${i===0?'#F5A623':i===1?'#9B9B9B':i===2?'#8B572A':'inherit'}">#${i+1}</td>
-              <td style="padding:8px;">${u.avatar} ${u.name}</td>
-              <td style="padding:8px;">${u.solvedCount}</td>
-              <td style="padding:8px;">${u.completedCount}</td>
-            </tr>
-          `).join("")}
-        </table>
+        <div class="lc-leaderboard">
+          ${lb.leaderboard.map((u, i) => {
+            const isMe = u.id === user.id;
+            return `<div class="lc-lb-row ${isMe ? 'lc-lb-me' : ''}">
+              <span class="lc-lb-rank">${i < 3 ? medals[i] : '#' + (i+1)}</span>
+              <span class="lc-lb-avatar">${u.avatar || '🧑‍💻'}</span>
+              <span class="lc-lb-name">${u.name}${isMe ? ' <span class="lc-lb-you">(you)</span>' : ''}</span>
+              <span class="lc-lb-score">${u.solvedCount + u.completedCount} pts</span>
+            </div>`;
+          }).join("")}
+        </div>
       `;
     })
     .catch(() => {
-      document.getElementById('leaderboardHost').innerHTML = `<p style="color:var(--error);">Failed to load leaderboard.</p>`;
+      document.getElementById('leaderboardHost').innerHTML = `<p style="color:var(--text-muted);">Failed to load leaderboard.</p>`;
     });
 
+  // --- Event Listeners ---
   document.getElementById("signOutBtn").addEventListener("click", () => {
     Auth.signOut();
     window.location.hash = "#/";
