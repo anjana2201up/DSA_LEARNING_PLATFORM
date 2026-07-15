@@ -1,0 +1,18 @@
+[
+  {
+    "id": "3c672973-8452-4c88-9f8a-dc439099a322",
+    "name": "ANJANA",
+    "email": "sharmaanjana5965@gmail.com",
+    "passwordHash": "$2b$10$//MdS9XLtpYimpYTDomE6eYcrds.a9qgUAqaDZqTzOJPgyeQxcLp2",
+    "googleId": null,
+    "avatar": "🧑‍💻",
+    "createdAt": "2026-07-15T09:20:56.944Z",
+    "lastActive": "2026-07-15T09:20:56.944Z",
+    "progress": {
+      "completed": [],
+      "bookmarks": [],
+      "completedAt": {},
+      "solvedProblems": []
+    }
+  }
+]

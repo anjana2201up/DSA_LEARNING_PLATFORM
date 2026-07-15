@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Master Data Structures & Algorithms</title>
+<meta name="description" content="A W3Schools-style learning platform for Data Structures & Algorithms — basic to advanced — with visual diagrams, a live compiler, and practice problems." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0F121A;
+    color: #E9EAF2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+  .hero {
+    text-align: center;
+    max-width: 720px;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+  .brand-mark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #E8A33D;
+    display: inline-block;
+    margin-bottom: 12px;
+    letter-spacing: -1px;
+  }
+  .brand-mark em { font-style: normal; color: #3DDBD9; }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #E9EAF2 40%, #E8A33D 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    font-size: 1.1rem;
+    color: #8B90AA;
+    line-height: 1.7;
+    margin-bottom: 36px;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 36px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #E8A33D, #d4891e);
+    color: #0F121A;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(232,163,61,0.3);
+  }
+  .cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(232,163,61,0.45);
+  }
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 56px;
+    width: 100%;
+  }
+  .feat {
+    background: #171B27;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: left;
+  }
+  .feat-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .feat h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .feat p { font-size: 0.85rem; color: #8B90AA; line-height: 1.55; }
+  footer {
+    margin-top: 64px;
+    padding: 20px;
+    font-size: 0.8rem;
+    color: #5B6180;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="brand-mark">&lt;/&gt; DSA <em>Nexus</em></div>
+    <h1>Learn Data Structures & Algorithms from Zero to Hero</h1>
+    <p class="subtitle">
+      35 topics, 12 coding-interview patterns, a built-in compiler, practice problems with auto-grading — all in one place. No setup needed.
+    </p>
+    <a href="/app" class="cta">Enter Platform →</a>
+
+    <div class="features">
+      <div class="feat">
+        <div class="feat-icon">📚</div>
+        <h3>35+ Topics</h3>
+        <p>From arrays and linked lists to tries and segment trees, each with diagrams and complexity analysis.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🧩</div>
+        <h3>Practice Problems</h3>
+        <p>Classic coding problems with hidden test cases and instant auto-grading for JavaScript.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⌨️</div>
+        <h3>Built-in Compiler</h3>
+        <p>Run JavaScript, Python, C++, and Java right in your browser — no local toolchain required.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🎯</div>
+        <h3>12 Patterns</h3>
+        <p>The classic coding-interview patterns taught as interactive slide decks you can swipe through.</p>
+      </div>
+    </div>
+  </div>
+  <footer>DSA Nexus — built with Node.js, Express, HTML, CSS &amp; vanilla JS.</footer>
+</body>
+</html>

@@ -29,6 +29,7 @@ const Progress = (() => {
     const set = readSet(KEYS.completed);
     set.has(topicId) ? set.delete(topicId) : set.add(topicId);
     writeSet(KEYS.completed, set);
+    if (window.Auth && Auth.isSignedIn()) Auth.pushProgress({ completed: [...set] });
     return set.has(topicId);
   }
   function completedIds() { return readSet(KEYS.completed); }
@@ -39,6 +40,7 @@ const Progress = (() => {
     const set = readSet(KEYS.bookmarks);
     set.has(topicId) ? set.delete(topicId) : set.add(topicId);
     writeSet(KEYS.bookmarks, set);
+    if (window.Auth && Auth.isSignedIn()) Auth.pushProgress({ bookmarks: [...set] });
     return set.has(topicId);
   }
   function bookmarkedIds() { return readSet(KEYS.bookmarks); }

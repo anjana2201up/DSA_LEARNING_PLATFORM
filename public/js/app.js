@@ -5,12 +5,19 @@
 //   #/topic/:id             -> a DSA topic article + compiler
 //   #/pattern/:id           -> a 12-Patterns slide deck
 //   #/category/:id          -> topic list for a category
+//   #/bookmarks             -> saved topics
+//   #/dashboard             -> personal dashboard (requires sign-in)
+//   #/problems              -> LeetCode-style problem list
+//   #/problem/:id           -> problem detail + judge terminal
+//   #/terminal               -> free-form multi-language terminal
+//   #/feedback              -> feedback form
 
 const state = {
   categories: [],
   topics: [],
   patterns: [],
-  scale: []
+  scale: [],
+  languages: null
 };
 
 const contentEl = document.getElementById("content");
@@ -30,8 +37,22 @@ async function boot() {
   buildSidebar();
   wireSearch();
   wireMobileNav();
+  wireTheme();
+  wireAuthArea();
+  wireAuthModal();
   window.addEventListener("hashchange", route);
+  window.addEventListener("hashchange", updatePrimaryNavActive);
+  window.addEventListener("auth:changed", wireAuthArea);
+  window.addEventListener("keydown", handleGlobalKeydown);
   route();
+  updatePrimaryNavActive();
+}
+
+function updatePrimaryNavActive() {
+  const hash = window.location.hash || "#/";
+  document.querySelectorAll(".spn-link").forEach(link => {
+    link.classList.toggle("active", link.getAttribute("href") === hash || (hash === "#/" && link.getAttribute("href") === "#/"));
+  });
 }
 
 // ---------------- Sidebar ----------------
@@ -47,7 +68,7 @@ function buildSidebar() {
           <span class="chevron">›</span>
         </button>
         <ul class="cat-topics">
-          ${topicsInCat.map(t => `<li><a href="#/topic/${t.id}" data-topic="${t.id}">${t.title}</a></li>`).join("")}
+          ${topicsInCat.map(t => `<li><a href="#/topic/${t.id}" data-topic="${t.id}" class="${Progress.isComplete(t.id) ? "is-complete" : ""}">${t.title}</a></li>`).join("")}
         </ul>
       </div>`;
   }).join("");
@@ -95,6 +116,12 @@ function route() {
   if (path === "topic" && id) return renderTopic(id);
   if (path === "pattern" && id) return renderPattern(id);
   if (path === "category" && id) return renderCategory(id);
+  if (path === "bookmarks") return renderBookmarks();
+  if (path === "dashboard") return renderDashboard();
+  if (path === "problems") return renderProblemsList();
+  if (path === "problem" && id) return renderProblemDetail(id);
+  if (path === "terminal") return renderTerminalPage();
+  if (path === "feedback") return renderFeedback();
   return renderHome();
 }
 
@@ -190,6 +217,14 @@ async function renderTopic(id) {
       <div class="crumb"><a href="#/">Home</a><span class="sep">/</span><a href="#/category/${topic.category}">${cat ? cat.label : ""}</a></div>
       <h1>${topic.title}</h1>
       <p class="summary">${topic.summary}</p>
+      <div class="topic-actions">
+        <button class="action-btn bookmark-btn ${Progress.isBookmarked(id) ? "active" : ""}" id="bookmarkBtn" type="button">
+          ${Progress.isBookmarked(id) ? "★ Saved" : "☆ Save for later"}
+        </button>
+        <button class="action-btn complete-btn ${Progress.isComplete(id) ? "active" : ""}" id="completeBtn" type="button">
+          ${Progress.isComplete(id) ? "✓ Completed" : "Mark as complete"}
+        </button>
+      </div>
     </div>
 
     <div class="topic-visual-row">
@@ -209,7 +244,17 @@ async function renderTopic(id) {
 
     ${topic.code && topic.code.js ? `
       <h3 style="font-family:var(--font-display); margin-top:30px;">Reference implementation</h3>
-      <pre class="slide-code"><code>${escapeHtml(topic.code.js)}</code></pre>
+      <pre class="slide-code"><code>${highlightJS(topic.code.js)}</code></pre>
+    ` : ""}
+
+    ${topic.practice && topic.practice.length ? `
+      <div class="practice-section">
+        <h3>Practice problems that use this</h3>
+        <p class="hint">Classic problems built on this concept — search these titles on any judge to practice.</p>
+        <div class="chip-row">
+          ${topic.practice.map(p => `<a class="chip" target="_blank" rel="noopener" href="https://leetcode.com/problemset/?search=${encodeURIComponent(p)}">${p} ↗</a>`).join("")}
+        </div>
+      </div>
     ` : ""}
 
     <div id="editorHost"></div>
@@ -219,6 +264,19 @@ async function renderTopic(id) {
       ${next ? `<a class="pager-btn next" href="#/topic/${next.id}"><div class="pg-label">Next →</div><div class="pg-title">${next.title}</div></a>` : `<span></span>`}
     </div>
   `;
+
+  document.getElementById("bookmarkBtn").addEventListener("click", (e) => {
+    const active = Progress.toggleBookmark(id);
+    e.target.classList.toggle("active", active);
+    e.target.textContent = active ? "★ Saved" : "☆ Save for later";
+  });
+  document.getElementById("completeBtn").addEventListener("click", (e) => {
+    const active = Progress.toggleComplete(id);
+    e.target.classList.toggle("active", active);
+    e.target.textContent = active ? "✓ Completed" : "Mark as complete";
+    const sidebarLink = sidebarContentEl.querySelector(`a[data-topic="${id}"]`);
+    if (sidebarLink) sidebarLink.classList.toggle("is-complete", active);
+  });
 
   // Diagram
   const diagramHost = document.getElementById("diagramHost");
@@ -359,6 +417,364 @@ function wireMobileNav() {
 function closeMobileSidebar() {
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("sidebarBackdrop").classList.remove("show");
+}
+
+// ---------------- Bookmarks page ----------------
+
+function renderBookmarks() {
+  const ids = [...Progress.bookmarkedIds()];
+  const topics = ids.map(id => state.topics.find(t => t.id === id)).filter(Boolean);
+  contentEl.innerHTML = `
+    <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>Saved topics</div>
+    <h1 style="font-family:var(--font-display);">★ Saved topics</h1>
+    ${topics.length ? `<div class="bookmark-grid">${topics.map(t => `
+      <a class="cat-card" href="#/topic/${t.id}"><h3>${t.title}</h3><p>${t.summary}</p></a>`).join("")}</div>`
+      : `<div class="bookmark-empty">You haven't saved any topics yet. Open a topic and tap <strong>☆ Save for later</strong>.</div>`}
+  `;
+  window.scrollTo(0, 0);
+}
+
+// ---------------- Dashboard ----------------
+
+const AVATAR_CHOICES = ["🧑‍💻","🧑‍🎓","🦉","🐙","🐢","🦊","🐼","🚀","🔥","⚡","🌙","🫧"];
+
+async function renderDashboard() {
+  if (!window.Auth || !Auth.isSignedIn()) {
+    contentEl.innerHTML = `
+      <div class="signed-out-panel">
+        <h2>Sign in to see your dashboard</h2>
+        <p style="color:var(--text-muted); margin-bottom:20px;">Track completed topics, saved bookmarks, and solved problems across sessions.</p>
+        <button class="btn btn-primary" id="dashSignInBtn" type="button">Sign In</button>
+      </div>`;
+    document.getElementById("dashSignInBtn").addEventListener("click", () => openAuthModal("login"));
+    return;
+  }
+
+  contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading your dashboard…</p>`;
+  let data;
+  try { data = await Auth.fetchDashboard(); }
+  catch { contentEl.innerHTML = `<div class="not-found"><h2>Couldn't load dashboard</h2><p><a href="#/">Return home</a></p></div>`; return; }
+
+  const { user, stats } = data;
+  const recent = Object.entries(user.progress.completedAt || {})
+    .sort((a, b) => new Date(b[1]) - new Date(a[1])).slice(0, 8);
+
+  contentEl.innerHTML = `
+    <div class="dash-header">
+      <div class="dash-avatar">${user.avatar || "🧑‍💻"}</div>
+      <div>
+        <div class="dash-name-row">
+          <h1>${user.name}</h1>
+          <button class="dash-edit-btn" id="editProfileBtn" type="button">Edit</button>
+        </div>
+        <div class="dash-email">${user.email} · member since ${new Date(user.createdAt).toLocaleDateString()}</div>
+      </div>
+      <button class="btn btn-ghost dash-signout" id="signOutBtn" type="button">Sign out</button>
+    </div>
+
+    <div id="editProfilePanel" style="display:none; margin-bottom:26px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
+      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Display name</label>
+      <input id="editNameInput" type="text" value="${user.name}" style="width:100%; margin:8px 0 14px; padding:9px 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text);" />
+      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Avatar</label>
+      <div class="avatar-picker">
+        ${AVATAR_CHOICES.map(a => `<span class="avatar-option ${a === user.avatar ? "selected" : ""}" data-avatar="${a}">${a}</span>`).join("")}
+      </div>
+      <button class="btn btn-primary" id="saveProfileBtn" type="button">Save changes</button>
+    </div>
+
+    <div class="dash-stat-grid">
+      <div class="dash-stat-card"><b>${stats.percentComplete}%</b><span>Overall progress</span></div>
+      <div class="dash-stat-card"><b>${stats.completedCount}/${stats.totalTopics}</b><span>Topics completed</span></div>
+      <div class="dash-stat-card"><b>${stats.bookmarkCount}</b><span>Saved topics</span></div>
+      <div class="dash-stat-card"><b>${stats.solvedProblemCount}/18</b><span>Problems solved</span></div>
+    </div>
+
+    <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Progress by track</h2>
+    <div class="mini-bar-grid" style="margin-bottom:34px;">
+      ${state.categories.map(cat => {
+        const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
+        const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
+        return `<div class="mini-bar-card">
+          <div class="mb-label"><span>${cat.label}</span><span>${c.done}/${c.total}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Recent activity</h2>
+    ${recent.length ? `<ul class="activity-list">
+      ${recent.map(([topicId, ts]) => {
+        const t = state.topics.find(x => x.id === topicId);
+        return `<li><a href="#/topic/${topicId}">${t ? t.title : topicId}</a><span class="act-date">${new Date(ts).toLocaleDateString()}</span></li>`;
+      }).join("")}
+    </ul>` : `<p style="color:var(--text-muted);">Nothing completed yet — head to <a href="#/" style="color:var(--accent);">the topics</a> and mark your first one!</p>`}
+  `;
+
+  document.getElementById("signOutBtn").addEventListener("click", () => {
+    Auth.signOut();
+    window.location.hash = "#/";
+  });
+  document.getElementById("editProfileBtn").addEventListener("click", () => {
+    const panel = document.getElementById("editProfilePanel");
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  });
+  let selectedAvatar = user.avatar;
+  document.querySelectorAll(".avatar-option").forEach(opt => {
+    opt.addEventListener("click", () => {
+      document.querySelectorAll(".avatar-option").forEach(o => o.classList.remove("selected"));
+      opt.classList.add("selected");
+      selectedAvatar = opt.dataset.avatar;
+    });
+  });
+  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    const name = document.getElementById("editNameInput").value.trim();
+    try { await Auth.updateProfile({ name, avatar: selectedAvatar }); renderDashboard(); wireAuthArea(); }
+    catch (err) { alert(err.message); }
+  });
+
+  window.scrollTo(0, 0);
+}
+
+// ---------------- Problems list + detail ----------------
+
+async function renderProblemsList() {
+  contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading problems…</p>`;
+  const res = await fetch("/api/problems");
+  const data = await res.json();
+  const solved = window.Auth && Auth.isSignedIn() ? (Auth.getUser()?.progress?.solvedProblems || []) : [];
+
+  contentEl.innerHTML = `
+    <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>Problems</div>
+    <h1 style="font-family:var(--font-display);">🧩 Practice Problems</h1>
+    <p style="color:var(--text-muted); margin-bottom:24px;">${data.total} classic problems. JavaScript submissions are auto-graded against hidden test cases; other available languages can be run freely.</p>
+    <div class="problem-grid">
+      ${data.problems.map(p => `
+        <a class="problem-row" href="#/problem/${p.id}">
+          <span class="diff-badge diff-${p.difficulty}">${p.difficulty}</span>
+          <span class="pr-title">${p.title}</span>
+          <span class="pr-tags">${p.tags.map(t => `<span class="pr-tag">${t}</span>`).join("")}</span>
+          ${solved.includes(p.id) ? `<span class="pr-solved">✓ Solved</span>` : ""}
+        </a>`).join("")}
+    </div>`;
+  window.scrollTo(0, 0);
+}
+
+async function renderProblemDetail(id) {
+  contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading…</p>`;
+  const res = await fetch(`/api/problems/${id}`);
+  if (!res.ok) {
+    contentEl.innerHTML = `<div class="not-found"><h2>Problem not found</h2><p><a href="#/problems">Back to problems</a></p></div>`;
+    return;
+  }
+  const problem = await res.json();
+
+  contentEl.innerHTML = `
+    <div class="crumb"><a href="#/">Home</a><span class="sep">/</span><a href="#/problems">Problems</a><span class="sep">/</span>${problem.title}</div>
+    <div class="problem-detail-layout">
+      <div class="problem-statement">
+        <span class="diff-badge diff-${problem.difficulty}">${problem.difficulty}</span>
+        <h1>${problem.title}</h1>
+        <div>${problem.description}</div>
+        ${problem.examples.map((ex, i) => `
+          <div class="example-block">
+            <b>Example ${i + 1}:</b><br/>
+            Input: ${escapeHtml(ex.input)}<br/>
+            Output: ${escapeHtml(ex.output)}
+            ${ex.explanation ? `<br/>Explanation: ${escapeHtml(ex.explanation)}` : ""}
+          </div>`).join("")}
+        <h3 style="font-family:var(--font-display); font-size:0.95rem;">Constraints</h3>
+        <ul class="constraint-list">${problem.constraints.map(c => `<li>${escapeHtml(c)}</li>`).join("")}</ul>
+      </div>
+      <div id="judgeHost"></div>
+    </div>
+  `;
+  Terminal.mountJudge(document.getElementById("judgeHost"), problem);
+  window.scrollTo(0, 0);
+}
+
+// ---------------- Free-form terminal page ----------------
+
+function renderTerminalPage() {
+  contentEl.innerHTML = `
+    <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>Terminal</div>
+    <h1 style="font-family:var(--font-display);">⌨️ Terminal</h1>
+    <p style="color:var(--text-muted); margin-bottom:20px;">Run a snippet in any language available on this server. Nothing is graded here — for graded problems, see <a href="#/problems" style="color:var(--accent);">Problems</a>.</p>
+    <div class="terminal-page-layout" id="freeTerminalHost"></div>
+  `;
+  Terminal.mountFree(document.getElementById("freeTerminalHost"));
+  window.scrollTo(0, 0);
+}
+
+// ---------------- Feedback page ----------------
+
+function renderFeedback() {
+  contentEl.innerHTML = `
+    <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>Feedback</div>
+    <h1 style="font-family:var(--font-display);">💬 Feedback</h1>
+    <p style="color:var(--text-muted); margin-bottom:20px;">Something confusing, broken, or missing? Tell us.</p>
+    <form class="feedback-form" id="feedbackForm">
+      <div class="form-row" style="margin-bottom:14px;">
+        <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Your rating</label>
+        <div class="star-picker" id="starPicker">${[1,2,3,4,5].map(n => `<span data-val="${n}">★</span>`).join("")}</div>
+      </div>
+      <div class="form-row" style="margin-bottom:14px; display:flex; flex-direction:column; gap:6px;">
+        <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Message</label>
+        <textarea id="feedbackMessage" required rows="5" style="padding:10px 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text); font-family:var(--font-body); resize:vertical;" placeholder="What worked, what didn't, what you'd like to see…"></textarea>
+      </div>
+      <div class="auth-error hidden" id="feedbackError"></div>
+      <button type="submit" class="btn btn-primary">Send feedback</button>
+    </form>
+  `;
+
+  let rating = 0;
+  document.querySelectorAll("#starPicker span").forEach(star => {
+    star.addEventListener("click", () => {
+      rating = Number(star.dataset.val);
+      document.querySelectorAll("#starPicker span").forEach(s => s.classList.toggle("active", Number(s.dataset.val) <= rating));
+    });
+  });
+
+  document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById("feedbackError");
+    errBox.classList.add("hidden");
+    const message = document.getElementById("feedbackMessage").value.trim();
+    if (!rating) { errBox.textContent = "Please pick a star rating."; errBox.classList.remove("hidden"); return; }
+    try {
+      const token = window.Auth ? Auth.getToken() : null;
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ message, rating })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not send feedback.");
+      contentEl.innerHTML = `<div class="feedback-thanks"><h2>🙏 Thank you!</h2><p style="color:var(--text-muted);">Your feedback helps make this better.</p><a href="#/" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">Back home</a></div>`;
+    } catch (err) {
+      errBox.textContent = err.message; errBox.classList.remove("hidden");
+    }
+  });
+  window.scrollTo(0, 0);
+}
+
+// ---------------- Theme toggle (dark -> aurora -> light -> dark) ----------------
+
+function wireTheme() {
+  const btn = document.getElementById("themeToggle");
+  const order = ["dark", "aurora", "light"];
+  btn.addEventListener("click", () => {
+    const current = Progress.getTheme();
+    const next = order[(order.indexOf(current) + 1) % order.length];
+    Progress.setTheme(next);
+  });
+}
+
+// ---------------- Auth area (topbar) + modal ----------------
+
+function wireAuthArea() {
+  const area = document.getElementById("authArea");
+  if (!window.Auth || !Auth.isSignedIn()) {
+    area.innerHTML = `<button class="auth-signin-btn" id="topbarSignInBtn" type="button">Sign In</button>`;
+    document.getElementById("topbarSignInBtn").addEventListener("click", () => openAuthModal("login"));
+    return;
+  }
+  const user = Auth.getUser();
+  area.innerHTML = `<a class="user-chip" href="#/dashboard"><span class="avatar-circle">${user.avatar || "🧑‍💻"}</span><span>${(user.name || "").split(" ")[0]}</span></a>`;
+}
+
+function openAuthModal(tab) {
+  const backdrop = document.getElementById("authModalBackdrop");
+  backdrop.classList.remove("hidden");
+  switchAuthTab(tab || "login");
+}
+function closeAuthModal() {
+  document.getElementById("authModalBackdrop").classList.add("hidden");
+  document.getElementById("authError").classList.add("hidden");
+  document.getElementById("authForm").reset();
+}
+function switchAuthTab(tab) {
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.getElementById("nameRow").style.display = tab === "register" ? "flex" : "none";
+  document.getElementById("authModalTitle").textContent = tab === "register" ? "Create your account" : "Welcome back";
+  document.getElementById("authSubmitBtn").textContent = tab === "register" ? "Create account" : "Sign In";
+  document.getElementById("authForm").dataset.mode = tab;
+  document.getElementById("authError").classList.add("hidden");
+}
+
+function wireAuthModal() {
+  document.getElementById("authModalClose").addEventListener("click", closeAuthModal);
+  document.getElementById("authModalBackdrop").addEventListener("click", (e) => {
+    if (e.target.id === "authModalBackdrop") closeAuthModal();
+  });
+  document.querySelectorAll(".auth-tab").forEach(tab => {
+    tab.addEventListener("click", () => switchAuthTab(tab.dataset.tab));
+  });
+
+  document.getElementById("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const mode = e.target.dataset.mode || "login";
+    const errBox = document.getElementById("authError");
+    errBox.classList.add("hidden");
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    const name = document.getElementById("authName").value.trim();
+    try {
+      if (mode === "register") await Auth.register({ name, email, password });
+      else await Auth.login({ email, password });
+      closeAuthModal();
+      wireAuthArea();
+      route();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove("hidden");
+    }
+  });
+
+  initGoogleButton();
+}
+
+async function initGoogleButton() {
+  const host = document.getElementById("googleSignInHost");
+  const config = await Auth.fetchGoogleConfig();
+  if (!config.googleEnabled) {
+    host.innerHTML = `<div class="google-signin-fallback">Sign in with Google isn't configured on this server yet — see README.md to enable it.</div>`;
+    return;
+  }
+  const script = document.createElement("script");
+  script.src = "https://accounts.google.com/gsi/client";
+  script.async = true;
+  script.onload = () => {
+    google.accounts.id.initialize({
+      client_id: config.googleClientId,
+      callback: async (response) => {
+        try {
+          await Auth.loginWithGoogleIdToken(response.credential);
+          closeAuthModal(); wireAuthArea(); route();
+        } catch (err) {
+          const errBox = document.getElementById("authError");
+          errBox.textContent = err.message; errBox.classList.remove("hidden");
+        }
+      }
+    });
+    google.accounts.id.renderButton(host, { theme: "outline", size: "large", width: 320 });
+  };
+  document.head.appendChild(script);
+}
+
+// ---------------- Keyboard shortcuts ----------------
+
+function handleGlobalKeydown(e) {
+  const tag = (document.activeElement && document.activeElement.tagName) || "";
+  const typing = tag === "INPUT" || tag === "TEXTAREA";
+  if (e.key === "/" && !typing) {
+    e.preventDefault();
+    document.getElementById("searchInput").focus();
+  } else if (e.key === "Escape") {
+    document.getElementById("searchResults").classList.add("hidden");
+    closeMobileSidebar();
+    if (!document.getElementById("authModalBackdrop").classList.contains("hidden")) closeAuthModal();
+    if (typing) document.activeElement.blur();
+  }
 }
 
 function escapeHtml(str) {
