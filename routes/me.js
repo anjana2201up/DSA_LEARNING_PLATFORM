@@ -51,4 +51,16 @@ function buildStats(user) {
   };
 }
 
+router.get("/leaderboard", (req, res) => {
+  const users = store.getAllPublicUsers();
+  const ranked = users.map(u => ({
+    id: u.id,
+    name: u.name,
+    avatar: u.avatar,
+    solvedCount: u.progress?.solvedProblems?.length || 0,
+    completedCount: u.progress?.completed?.length || 0
+  })).sort((a, b) => (b.solvedCount + b.completedCount) - (a.solvedCount + a.completedCount));
+  res.json({ leaderboard: ranked });
+});
+
 module.exports = router;

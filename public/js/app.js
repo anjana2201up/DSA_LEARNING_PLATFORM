@@ -489,26 +489,81 @@ async function renderDashboard() {
       <div class="dash-stat-card"><b>${stats.solvedProblemCount}/18</b><span>Problems solved</span></div>
     </div>
 
-    <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Progress by track</h2>
-    <div class="mini-bar-grid" style="margin-bottom:34px;">
-      ${state.categories.map(cat => {
-        const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
-        const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
-        return `<div class="mini-bar-card">
-          <div class="mb-label"><span>${cat.label}</span><span>${c.done}/${c.total}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-        </div>`;
-      }).join("")}
+    <div style="display:flex; flex-wrap:wrap; gap:20px; margin-bottom:34px;">
+      <div style="flex:1; min-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
+        <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Progress by track</h2>
+        <canvas id="progressChart" width="400" height="200"></canvas>
+      </div>
+      <div style="flex:1; min-width:300px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px;">
+        <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Recent activity</h2>
+        ${recent.length ? `<ul class="activity-list">
+          ${recent.map(([topicId, ts]) => {
+            const t = state.topics.find(x => x.id === topicId);
+            return `<li><a href="#/topic/${topicId}">${t ? t.title : topicId}</a><span class="act-date">${new Date(ts).toLocaleDateString()}</span></li>`;
+          }).join("")}
+        </ul>` : `<p style="color:var(--text-muted);">Nothing completed yet.</p>`}
+      </div>
     </div>
 
-    <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">Recent activity</h2>
-    ${recent.length ? `<ul class="activity-list">
-      ${recent.map(([topicId, ts]) => {
-        const t = state.topics.find(x => x.id === topicId);
-        return `<li><a href="#/topic/${topicId}">${t ? t.title : topicId}</a><span class="act-date">${new Date(ts).toLocaleDateString()}</span></li>`;
-      }).join("")}
-    </ul>` : `<p style="color:var(--text-muted);">Nothing completed yet — head to <a href="#/" style="color:var(--accent);">the topics</a> and mark your first one!</p>`}
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:34px;">
+      <h2 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:14px;">🏆 Global Leaderboard</h2>
+      <div id="leaderboardHost"><p style="color:var(--text-muted);">Loading leaderboard...</p></div>
+    </div>
   `;
+
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  const catLabels = [];
+  const catData = [];
+  state.categories.forEach(cat => {
+    const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
+    catLabels.push(cat.label);
+    catData.push(c.done);
+  });
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        label: 'Topics Completed',
+        data: catData,
+        backgroundColor: '#4A90E2',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+      plugins: {
+        legend: { labels: { color: 'gray' } }
+      }
+    }
+  });
+
+  fetch('/api/me/leaderboard')
+    .then(res => res.json())
+    .then(data => {
+      const host = document.getElementById('leaderboardHost');
+      if (!data.leaderboard || data.leaderboard.length === 0) {
+        host.innerHTML = `<p style="color:var(--text-muted);">No users ranked yet.</p>`;
+        return;
+      }
+      host.innerHTML = `
+        <table style="width:100%; text-align:left; border-collapse:collapse;">
+          <tr style="border-bottom:1px solid var(--border);"><th style="padding:8px;">Rank</th><th style="padding:8px;">User</th><th style="padding:8px;">Solved</th><th style="padding:8px;">Topics</th></tr>
+          ${data.leaderboard.map((u, i) => `
+            <tr style="border-bottom:1px solid var(--border-light);">
+              <td style="padding:8px; font-weight:bold; color:${i===0?'#F5A623':i===1?'#9B9B9B':i===2?'#8B572A':'inherit'}">#${i+1}</td>
+              <td style="padding:8px;">${u.avatar} ${u.name}</td>
+              <td style="padding:8px;">${u.solvedCount}</td>
+              <td style="padding:8px;">${u.completedCount}</td>
+            </tr>
+          `).join("")}
+        </table>
+      `;
+    })
+    .catch(() => {
+      document.getElementById('leaderboardHost').innerHTML = `<p style="color:var(--error);">Failed to load leaderboard.</p>`;
+    });
 
   document.getElementById("signOutBtn").addEventListener("click", () => {
     Auth.signOut();
