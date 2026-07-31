@@ -86,6 +86,7 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 // ---------- Page routing: landing page at "/", the SPA at "/app" ----------
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "welcome.html")));
+app.get("/roadmap", (req, res) => res.sendFile(path.join(__dirname, "public", "roadmap.html")));
 app.get(["/app", "/app/*"], (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
 app.get("*", (req, res) => res.redirect("/"));
