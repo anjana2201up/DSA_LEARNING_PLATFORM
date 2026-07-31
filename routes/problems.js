@@ -1,7 +1,10 @@
 // routes/problems.js
 const express = require("express");
 const { PROBLEMS, GENERIC_CPP_STARTER, GENERIC_JAVA_STARTER } = require("../data/problems");
+const { PROBLEMS_EXTRA } = require("../data/problems-extra");
 const { gradeJavaScript } = require("../lib/grader");
+
+const ALL_PROBLEMS = [...PROBLEMS, ...PROBLEMS_EXTRA];
 const { runCode, AVAILABLE } = require("../lib/runner");
 const { optionalAuth } = require("../middleware/auth");
 const store = require("../lib/userStore");
@@ -10,13 +13,13 @@ const router = express.Router();
 
 router.get("/", (req, res) => {
   res.json({
-    total: PROBLEMS.length,
-    problems: PROBLEMS.map(({ id, title, difficulty, tags }) => ({ id, title, difficulty, tags }))
+    total: ALL_PROBLEMS.length,
+    problems: ALL_PROBLEMS.map(({ id, title, difficulty, tags }) => ({ id, title, difficulty, tags }))
   });
 });
 
 router.get("/:id", (req, res) => {
-  const problem = PROBLEMS.find(p => p.id === req.params.id);
+  const problem = ALL_PROBLEMS.find(p => p.id === req.params.id);
   if (!problem) return res.status(404).json({ error: "Problem not found." });
   res.json({
     ...problem,
@@ -39,7 +42,7 @@ router.post("/:id/run", async (req, res) => {
 
 // Submit: only JavaScript is auto-graded against hidden test cases (see data/problems.js for why).
 router.post("/:id/submit", optionalAuth, (req, res) => {
-  const problem = PROBLEMS.find(p => p.id === req.params.id);
+  const problem = ALL_PROBLEMS.find(p => p.id === req.params.id);
   if (!problem) return res.status(404).json({ error: "Problem not found." });
   const { language = "javascript", code = "" } = req.body || {};
 
