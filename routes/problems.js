@@ -53,8 +53,13 @@ router.post("/:id/submit", optionalAuth, (req, res) => {
   }
 
   const grade = gradeJavaScript(code, problem);
-  if (grade.ok && grade.allPass && req.user) {
-    store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
+  const passed = !!(grade.ok && grade.allPass);
+  if (req.user) {
+    store.recordSubmission(req.user.sub, {
+      problemId: problem.id, title: problem.title, difficulty: problem.difficulty,
+      language, pass: passed
+    });
+    if (passed) store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
   }
   res.json(grade);
 });

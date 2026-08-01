@@ -9,7 +9,10 @@
 (function () {
   const canvas = document.createElement("canvas");
   canvas.id = "bgCanvas";
-  canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block;";
+  canvas.style.cssText = `
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: -1; pointer-events: none; display: block;
+  `;
   document.body.prepend(canvas);
   const ctx = canvas.getContext("2d");
 
@@ -32,9 +35,9 @@
   }
   function hexToRgba(hex, alpha) {
     const h = hex.replace("#", "");
-    if (h.length !== 6) return "rgba(232,163,61," + alpha + ")";
+    if (h.length !== 6) return `rgba(232,163,61,${alpha})`;
     const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+    return `rgba(${r},${g},${b},${alpha})`;
   }
 
   let W, H, dpr;
@@ -62,17 +65,15 @@
 
   function makeParticles() {
     const count = density();
-    particles = Array.from({ length: count }, function() {
-      return {
-        x: Math.random() * W,
-        y: Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18,
-        r: Math.random() * 1.6 + 0.6,
-        alt: Math.random() < 0.35,
-        phase: Math.random() * Math.PI * 2
-      };
-    });
+    particles = Array.from({ length: count }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: (Math.random() - 0.5) * 0.18,
+      r: Math.random() * 1.6 + 0.6,
+      alt: Math.random() < 0.35,
+      phase: Math.random() * Math.PI * 2
+    }));
   }
 
   let frame = 0;
@@ -121,8 +122,7 @@
     }
     ctx.globalAlpha = 1;
 
-    for (let k = 0; k < particles.length; k++) {
-      const p = particles[k];
+    for (const p of particles) {
       if (!reduceMotion) {
         p.x += p.vx;
         p.y += p.vy;
@@ -145,20 +145,20 @@
   }
 
   if (!isTouch) {
-    window.addEventListener("mousemove", function(e) { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
+    window.addEventListener("mousemove", (e) => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
   }
 
-  var resizeTimer;
-  window.addEventListener("resize", function() {
+  let resizeTimer;
+  window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function() {
+    resizeTimer = setTimeout(() => {
       sizeCanvas();
       makeParticles();
       if (reduceMotion) step();
     }, 150);
   });
 
-  window.addEventListener("dsa-theme-changed", function() {
+  window.addEventListener("dsa-theme-changed", () => {
     readThemeColors();
     if (reduceMotion) step();
   });

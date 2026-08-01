@@ -4,6 +4,8 @@ const store = require("../lib/userStore");
 const { requireAuth } = require("../middleware/auth");
 const { TOPICS } = require("../data/topics");
 const { PROBLEMS } = require("../data/problems");
+const { PROBLEMS_EXTRA } = require("../data/problems-extra");
+const ALL_PROBLEMS = [...PROBLEMS, ...PROBLEMS_EXTRA];
 
 const router = express.Router();
 
@@ -42,15 +44,22 @@ function buildStats(user) {
     if (user.progress.completed.includes(t.id)) byCategory[t.category].done++;
   }
 
-  // Problem difficulty breakdown
+  // Problem difficulty breakdown (difficulty casing varies across problem
+  // data files - normalize to lowercase keys so nothing silently under-counts)
   const difficulties = { easy: { total: 0, solved: 0 }, medium: { total: 0, solved: 0 }, hard: { total: 0, solved: 0 } };
-  for (const p of PROBLEMS) {
-    const d = p.difficulty || "easy";
+  for (const p of ALL_PROBLEMS) {
+    const d = (p.difficulty || "easy").toLowerCase();
     if (difficulties[d]) {
       difficulties[d].total++;
       if (user.progress.solvedProblems.includes(p.id)) difficulties[d].solved++;
     }
   }
+
+  const submissions = user.progress.submissions || [];
+  const acceptedCount = submissions.filter(s => s.pass).length;
+  const acceptanceRate = submissions.length ? Math.round((acceptedCount / submissions.length) * 100) : 0;
+  const languageCounts = {};
+  for (const s of submissions) languageCounts[s.language] = (languageCounts[s.language] || 0) + 1;
 
   return {
     totalTopics,
@@ -58,10 +67,15 @@ function buildStats(user) {
     percentComplete: totalTopics ? Math.round((completedCount / totalTopics) * 100) : 0,
     bookmarkCount: user.progress.bookmarks.length,
     solvedProblemCount: user.progress.solvedProblems.length,
-    totalProblems: PROBLEMS.length,
+    totalProblems: ALL_PROBLEMS.length,
     difficulties,
     byCategory,
-    memberSince: user.createdAt
+    memberSince: user.createdAt,
+    recentSubmissions: submissions.slice(0, 15),
+    totalSubmissions: submissions.length,
+    acceptanceRate,
+    languageCounts,
+    solvedAt: user.progress.solvedAt || {}
   };
 }
 

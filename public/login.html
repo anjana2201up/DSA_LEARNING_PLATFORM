@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign In — DSA Nexus</title>
+<meta name="description" content="Sign in or create an account to track your DSA learning progress, bookmarks, and solved problems." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   Login Page — Premium dark design matching the DSA Nexus aesthetic
+   =================================================================== */
+:root {
+  --bg-dark: #0A0D14;
+  --bg-card: rgba(23, 27, 39, 0.85);
+  --surface-glow: rgba(232, 163, 61, 0.08);
+  --primary: #E8A33D;
+  --primary-hover: #d4891e;
+  --secondary: #3DDBD9;
+  --text-main: #FFFFFF;
+  --text-muted: #8B90AA;
+  --text-faint: #5B6180;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-hover: rgba(232, 163, 61, 0.3);
+  --danger: #FF375F;
+  --success: #00B8A3;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  line-height: 1.6;
+}
+
+/* --- Animated background --- */
+.bg-animation {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 20% 60%, rgba(232, 163, 61, 0.10), transparent 30%),
+    radial-gradient(circle at 80% 30%, rgba(61, 219, 217, 0.08), transparent 30%);
+  animation: bgShift 20s ease-in-out infinite alternate;
+}
+@keyframes bgShift { 0% { transform: scale(1); } 100% { transform: scale(1.12); } }
+
+.grid-overlay {
+  position: fixed; inset: 0; z-index: -1;
+  background-image: linear-gradient(var(--card-border) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--card-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.25;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 75%);
+}
+
+/* --- Main layout --- */
+.login-wrapper {
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 580px;
+  margin: 24px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 40px rgba(232,163,61,0.04);
+  animation: cardSlideUp 0.7s ease-out both;
+}
+
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(36px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- Left panel (branding) --- */
+.login-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px 48px;
+  background: linear-gradient(135deg, rgba(232,163,61,0.08), rgba(61,219,217,0.04));
+  border-right: 1px solid var(--card-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-hero::before {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: -80px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,163,61,0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.login-hero .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  margin-bottom: 32px;
+}
+
+.login-hero .brand-mark {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.login-hero .brand-name {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.login-hero .brand-name em {
+  font-style: normal;
+  color: var(--primary);
+}
+
+.login-hero h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 16px;
+  background: linear-gradient(to right, #FFFFFF 40%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-hero p {
+  color: var(--text-muted);
+  font-size: 1rem;
+  max-width: 380px;
+  margin-bottom: 36px;
+}
+
+.hero-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hero-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.hero-feature .feat-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* --- Right panel (form) --- */
+.login-form-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 48px;
+  max-width: 520px;
+}
+
+/* Tab switcher */
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  margin-bottom: 28px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.auth-tab.active {
+  background: rgba(232, 163, 61, 0.15);
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(232,163,61,0.1);
+}
+
+.auth-tab:hover:not(.active) {
+  color: var(--text-main);
+}
+
+/* Form heading */
+.form-heading {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.form-subheading {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+
+/* Google button */
+.google-signin-host {
+  margin-bottom: 8px;
+}
+.google-signin-fallback {
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 8px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
+}
+
+/* Form fields */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-row label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.form-row input {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-row input::placeholder {
+  color: var(--text-faint);
+}
+
+.form-row input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(232,163,61,0.12);
+}
+
+/* Error box */
+.auth-error {
+  background: rgba(255,55,95,0.1);
+  border: 1px solid rgba(255,55,95,0.25);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+.auth-error.hidden { display: none; }
+
+/* Success box */
+.auth-success {
+  background: rgba(0,184,163,0.1);
+  border: 1px solid rgba(0,184,163,0.25);
+  color: var(--success);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-success.hidden { display: none; }
+
+/* Submit button */
+.auth-submit {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--bg-dark);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(232,163,61,0.25);
+}
+
+.auth-submit::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  transition: left 0.5s ease;
+}
+
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(232,163,61,0.4);
+}
+
+.auth-submit:hover::after { left: 200%; }
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Link back */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-faint);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-top: 24px;
+  transition: color 0.2s;
+}
+.back-link:hover { color: var(--primary); }
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .login-wrapper {
+    flex-direction: column;
+    max-width: 480px;
+    min-height: unset;
+  }
+  .login-hero {
+    padding: 36px 28px 28px;
+    border-right: none;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .login-hero h1 { font-size: 1.5rem; }
+  .hero-features { display: none; }
+  .login-form-panel {
+    padding: 28px;
+    max-width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+<div class="bg-animation"></div>
+<div class="grid-overlay"></div>
+
+<div class="login-wrapper">
+  <!-- Left: Branding panel -->
+  <div class="login-hero">
+    <a href="/" class="brand">
+      <span class="brand-mark">&lt;/&gt;</span>
+      <span class="brand-name">DSA <em>Nexus</em></span>
+    </a>
+
+    <h1>Track your progress.<br/>Master every pattern.</h1>
+    <p>Sign in to save your progress, bookmark topics, track solved problems, and see your personalized dashboard.</p>
+
+    <div class="hero-features">
+      <div class="hero-feature">
+        <span class="feat-icon">📊</span>
+        <span>Personal dashboard with heatmap &amp; streaks</span>
+      </div>
+      <div class="hero-feature">
+        <span class="feat-icon">★</span>
+        <span>Bookmark topics &amp; sync across devices</span>
+      </div>
+      <div class="hero-feature">
+        <span class="feat-icon">🧩</span>
+        <span>Auto-graded problem submissions tracked</span>
+      </div>
+      <div class="hero-feature">
+        <span class="feat-icon">🏆</span>
+        <span>Global leaderboard &amp; achievement stats</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Auth form -->
+  <div class="login-form-panel">
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login" type="button">Sign In</button>
+      <button class="auth-tab" data-tab="register" type="button">Create Account</button>
+    </div>
+
+    <h2 class="form-heading" id="formHeading">Welcome back</h2>
+    <p class="form-subheading" id="formSubheading">Sign in to continue your learning journey.</p>
+
+    <div id="googleSignInHost" class="google-signin-host"></div>
+    <div class="auth-divider"><span>or continue with email</span></div>
+
+    <form id="authForm">
+      <div class="form-row" id="nameRow" style="display:none;">
+        <label for="authName">Full Name</label>
+        <input id="authName" type="text" autocomplete="name" placeholder="Ada Lovelace" />
+      </div>
+      <div class="form-row">
+        <label for="authEmail">Email Address</label>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" required />
+      </div>
+      <div class="form-row">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••" required minlength="8" />
+      </div>
+      <div class="auth-error hidden" id="authError"></div>
+      <div class="auth-success hidden" id="authSuccess">
+        <span>✓</span> <span id="authSuccessText">Success! Redirecting…</span>
+      </div>
+      <button type="submit" class="auth-submit" id="authSubmitBtn">Sign In</button>
+    </form>
+
+    <a href="/" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to home
+    </a>
+  </div>
+</div>
+
+<!-- Auth module (reused from the app) -->
+<script src="/js/auth.js?v=4"></script>
+<script>
+(function () {
+  const form = document.getElementById("authForm");
+  const errBox = document.getElementById("authError");
+  const successBox = document.getElementById("authSuccess");
+  const successText = document.getElementById("authSuccessText");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const heading = document.getElementById("formHeading");
+  const subheading = document.getElementById("formSubheading");
+  const nameRow = document.getElementById("nameRow");
+
+  let mode = "login";
+
+  // Tab switching
+  document.querySelectorAll(".auth-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      mode = tab.dataset.tab;
+      document.querySelectorAll(".auth-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === mode));
+      nameRow.style.display = mode === "register" ? "flex" : "none";
+      heading.textContent = mode === "register" ? "Create your account" : "Welcome back";
+      subheading.textContent = mode === "register"
+        ? "Start tracking your DSA learning journey."
+        : "Sign in to continue your learning journey.";
+      submitBtn.textContent = mode === "register" ? "Create Account" : "Sign In";
+      errBox.classList.add("hidden");
+      successBox.classList.add("hidden");
+    });
+  });
+
+  // Form submission
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errBox.classList.add("hidden");
+    successBox.classList.add("hidden");
+    submitBtn.disabled = true;
+    submitBtn.textContent = mode === "register" ? "Creating account…" : "Signing in…";
+
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    const name = document.getElementById("authName").value.trim();
+
+    try {
+      if (mode === "register") {
+        await Auth.register({ name, email, password });
+        successText.textContent = "Account created! Redirecting…";
+      } else {
+        await Auth.login({ email, password });
+        successText.textContent = "Signed in! Redirecting…";
+      }
+      successBox.classList.remove("hidden");
+      setTimeout(() => { window.location.href = "/app#/dashboard"; }, 800);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = mode === "register" ? "Create Account" : "Sign In";
+    }
+  });
+
+  // Google Sign-In button
+  async function initGoogle() {
+    const host = document.getElementById("googleSignInHost");
+    const config = await Auth.fetchGoogleConfig();
+    if (!config.googleEnabled) {
+      host.innerHTML = '<div class="google-signin-fallback">Google Sign-In not configured on this server — use email/password instead.</div>';
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => {
+      google.accounts.id.initialize({
+        client_id: config.googleClientId,
+        callback: async (response) => {
+          try {
+            errBox.classList.add("hidden");
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Signing in with Google…";
+            await Auth.loginWithGoogleIdToken(response.credential);
+            successText.textContent = "Google sign-in successful! Redirecting…";
+            successBox.classList.remove("hidden");
+            setTimeout(() => { window.location.href = "/app#/dashboard"; }, 800);
+          } catch (err) {
+            errBox.textContent = err.message;
+            errBox.classList.remove("hidden");
+            submitBtn.disabled = false;
+            submitBtn.textContent = mode === "register" ? "Create Account" : "Sign In";
+          }
+        }
+      });
+      google.accounts.id.renderButton(host, {
+        theme: "outline", size: "large", width: 360,
+        text: "signin_with", shape: "pill"
+      });
+    };
+    document.head.appendChild(script);
+  }
+
+  // If already signed in, redirect straight to the app
+  if (Auth.isSignedIn()) {
+    window.location.href = "/app#/dashboard";
+  } else {
+    initGoogle();
+  }
+
+  // Check URL params for pre-selecting register tab
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tab") === "register") {
+    document.querySelector('.auth-tab[data-tab="register"]').click();
+  }
+})();
+</script>
+</body>
+</html>

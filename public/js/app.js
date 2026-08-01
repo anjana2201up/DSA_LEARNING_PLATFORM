@@ -434,28 +434,47 @@ function renderBookmarks() {
   window.scrollTo(0, 0);
 }
 
-// ---------------- Dashboard ----------------
-
 const AVATAR_CHOICES = ["🧑‍💻","🧑‍🎓","🦉","🐙","🐢","🦊","🐼","🚀","🔥","⚡","🌙","🫧"];
 
 async function renderDashboard() {
-  if (!window.Auth || !Auth.isSignedIn()) {
-    contentEl.innerHTML = `
-      <div class="signed-out-panel">
-        <h2>Sign in to see your dashboard</h2>
-        <p style="color:var(--text-muted); margin-bottom:20px;">Track completed topics, saved bookmarks, and solved problems across sessions.</p>
-        <button class="btn btn-primary" id="dashSignInBtn" type="button">Sign In</button>
-      </div>`;
-    document.getElementById("dashSignInBtn").addEventListener("click", () => openAuthModal("login"));
-    return;
+  let user, stats;
+
+  if (window.Auth && Auth.isSignedIn()) {
+    try {
+      contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading your dashboard…</p>`;
+      const data = await Auth.fetchDashboard();
+      user = data.user;
+      stats = data.stats;
+    } catch (err) {
+      console.warn("Failed to fetch dashboard, falling back to guest mode", err);
+    }
   }
 
-  contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading your dashboard…</p>`;
-  let data;
-  try { data = await Auth.fetchDashboard(); }
-  catch { contentEl.innerHTML = `<div class="not-found"><h2>Couldn't load dashboard</h2><p><a href="#/">Return home</a></p></div>`; return; }
+  // Fallback to Guest Mode if not signed in or if fetch failed
+  if (!user || !stats) {
+    user = {
+      name: "Guest Developer",
+      email: "guest@dsanexus.com",
+      avatar: "🧑‍💻",
+      createdAt: new Date().toISOString(),
+      progress: { completedAt: {} }
+    };
+    stats = {
+      percentComplete: 0,
+      completedCount: 0,
+      totalTopics: state.topics.length || 35,
+      solvedProblemCount: 0,
+      bookmarkCount: 0,
+      totalProblems: 0,
+      difficulties: { easy: {total: 0, solved: 0}, medium: {total: 0, solved: 0}, hard: {total: 0, solved: 0} },
+      byCategory: {},
+      recentSubmissions: [],
+      totalSubmissions: 0,
+      acceptanceRate: 0,
+      solvedAt: {}
+    };
+  }
 
-  const { user, stats } = data;
   const recent = Object.entries(user.progress.completedAt || {})
     .sort((a, b) => new Date(b[1]) - new Date(a[1])).slice(0, 8);
 
@@ -656,7 +675,7 @@ async function renderDashboard() {
   const catDone = [];
   const catTotal = [];
   state.categories.forEach(cat => {
-    const c = stats.byCategory[cat.id] || { total: 0, done: 0 };
+    const c = (stats.byCategory || {})[cat.id] || { total: 0, done: 0 };
     catLabels.push(cat.label);
     catDone.push(c.done);
     catTotal.push(c.total - c.done);
