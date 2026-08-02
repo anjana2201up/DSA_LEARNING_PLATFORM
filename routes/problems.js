@@ -54,14 +54,22 @@ router.post("/:id/submit", optionalAuth, (req, res) => {
 
   const grade = gradeJavaScript(code, problem);
   const passed = !!(grade.ok && grade.allPass);
+  let saveWarning = null;
   if (req.user) {
-    store.recordSubmission(req.user.sub, {
-      problemId: problem.id, title: problem.title, difficulty: problem.difficulty,
-      language, pass: passed
-    });
-    if (passed) store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
+    try {
+      store.recordSubmission(req.user.sub, {
+        problemId: problem.id, title: problem.title, difficulty: problem.difficulty,
+        language, pass: passed
+      });
+      if (passed) store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
+    } catch (err) {
+      // Grading itself succeeded - don't fail the whole request just because
+      // saving the result to the account didn't work (e.g. ephemeral storage
+      // on a serverless deploy). Surface it as a soft warning instead.
+      saveWarning = err.message;
+    }
   }
-  res.json(grade);
+  res.json(saveWarning ? { ...grade, saveWarning } : grade);
 });
 
 module.exports = router;

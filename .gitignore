@@ -1,2 +1,19 @@
 node_modules/
 *.log
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.production
+
+# User data and feedback (contains PII / password hashes)
+data/users.json
+data/feedback.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

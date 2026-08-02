@@ -3,9 +3,12 @@
 // content APIs (topics/patterns/problems), auth (JWT + optional Google),
 // a personal dashboard API, a multi-language code runner, and feedback.
 
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 const express = require("express");
 const compression = require("compression");
+const helmet = require("helmet");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const path = require("path");
 
 const { CATEGORIES, TOPICS, SCALE } = require("./data/topics");
@@ -21,8 +24,25 @@ const feedbackRoutes = require("./routes/feedback");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ---------- Security & performance middleware ----------
+
+app.use(helmet({
+  contentSecurityPolicy: false,  // CSP breaks inline scripts; handle separately if needed
+  crossOriginEmbedderPolicy: false
+}));
+app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: "200kb" }));
+
+// Rate-limit auth endpoints to prevent brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,   // 15 minutes
+  max: 30,                     // 30 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in 15 minutes." }
+});
+
 // index:false — we control "/" and "/app" ourselves below (landing vs SPA)
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
@@ -74,7 +94,7 @@ app.post("/api/compile", async (req, res) => {
 
 // ---------- Auth / dashboard / problems / terminal / feedback ----------
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/me", meRoutes);
 app.use("/api/problems", problemsRoutes);
 app.use("/api/run", runRoutes);

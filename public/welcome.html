@@ -3,43 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DSA Nexus — Master Data Structures & Algorithms</title>
-<meta name="description" content="A W3Schools-style learning platform for Data Structures & Algorithms — basic to advanced — with visual diagrams, a live compiler, and practice problems." />
+<title>DSA Nexus — Master Data Structures &amp; Algorithms</title>
+<meta name="description" content="A premium learning platform for Data Structures & Algorithms — from basics to advanced — with visual diagrams, interactive patterns, a live compiler, and auto-graded practice problems." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/landing.css" />
 </head>
 <body>
   <div class="bg-animation"></div>
   <div class="grid-overlay"></div>
+  <canvas id="particleCanvas"></canvas>
 
-  <!-- Top nav with sign-in -->
+  <!-- Top nav -->
   <nav class="landing-nav">
     <a href="/" class="nav-brand">
       <span class="nav-brand-mark">&lt;/&gt;</span>
       <span class="nav-brand-name">DSA <em>Nexus</em></span>
     </a>
-    <a href="/login" class="nav-signin-btn">Sign In</a>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#how-it-works" class="nav-link">How It Works</a>
+      <a href="/roadmap" class="nav-link">Roadmap</a>
+      <a href="/login" class="nav-signin-btn">Sign In</a>
+    </div>
   </nav>
 
+  <!-- Hero -->
   <main class="hero-container">
     <div class="brand-badge">
       <span class="icon">&lt;/&gt;</span> DSA Nexus 2.0
     </div>
-    
-    <h1>Learn Data Structures &<br/>Algorithms from Zero to Hero</h1>
-    
+
+    <h1>Learn Data Structures &amp;<br/>Algorithms from Zero to Hero</h1>
+
     <p class="hero-subtitle">
-      Stop jumping between tutorials and LeetCode. Master concepts with visual diagrams, interactive patterns, and a live auto-grading compiler — all in one unified platform.
+      Stop jumping between tutorials and LeetCode. Master concepts with visual diagrams,
+      interactive patterns, and a live auto-grading compiler — all in one unified platform.
     </p>
-    
+
     <div class="cta-wrapper">
-      <a href="/app" class="cta-button">
+      <a href="/app" class="cta-button primary">
         Enter Platform
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"></line>
           <polyline points="12 5 19 12 12 19"></polyline>
         </svg>
       </a>
-      <a href="/roadmap" class="cta-button" style="background: rgba(232, 163, 61, 0.1); border: 1px solid rgba(232, 163, 61, 0.3); color: var(--primary); margin-left: 16px;">
+      <a href="/roadmap" class="cta-button secondary">
         View Roadmap
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -50,59 +61,263 @@
 
     <div class="stats-container">
       <div class="stat-item">
-        <span class="stat-num">35+</span>
+        <span class="stat-num" data-target="35">0</span>
         <span class="stat-label">Core Topics</span>
       </div>
       <div class="stat-item">
-        <span class="stat-num">12</span>
+        <span class="stat-num" data-target="12">0</span>
         <span class="stat-label">Key Patterns</span>
       </div>
       <div class="stat-item">
-        <span class="stat-num">10+</span>
+        <span class="stat-num" data-target="50">0</span>
         <span class="stat-label">Practice Problems</span>
       </div>
       <div class="stat-item">
-        <span class="stat-num">4</span>
-        <span class="stat-label">Supported Languages</span>
+        <span class="stat-num" data-target="4">0</span>
+        <span class="stat-label">Languages</span>
       </div>
     </div>
   </main>
 
-  <section class="features-section">
+  <!-- How It Works -->
+  <section class="how-it-works reveal" id="how-it-works">
     <div class="section-header">
-      <h2>Everything you need to master DSA</h2>
-      <p style="color: var(--text-muted);">A fully integrated learning environment built for actual comprehension.</p>
+      <div class="section-badge">⚡ How It Works</div>
+      <h2>Three Steps to DSA Mastery</h2>
+      <p>A structured approach designed for real comprehension, not just memorization.</p>
     </div>
-    
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <h3>Learn the Concept</h3>
+        <p>Read clear, well-structured explanations with original SVG diagrams and complexity analysis for each data structure and algorithm.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <h3>Practice with Code</h3>
+        <p>Use the built-in compiler to experiment with implementations in JavaScript, Python, C++, and Java — right in your browser.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <h3>Solve &amp; Get Graded</h3>
+        <p>Submit solutions to classic coding problems and get instant auto-grading against hidden test cases. Track your progress on the dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features-section reveal" id="features">
+    <div class="section-header">
+      <div class="section-badge">🚀 Features</div>
+      <h2>Everything you need to master DSA</h2>
+      <p>A fully integrated learning environment built for actual comprehension.</p>
+    </div>
+
     <div class="features-grid">
       <div class="feature-card">
         <div class="feature-icon-wrapper">📚</div>
         <h3>Comprehensive Topics</h3>
         <p>From arrays and linked lists to tries and segment trees, each with custom SVG diagrams and interactive complexity analysis.</p>
       </div>
-      
+
       <div class="feature-card">
         <div class="feature-icon-wrapper">🧩</div>
         <h3>Auto-Graded Practice</h3>
-        <p>Classic coding problems with hidden test cases and instant auto-grading for JavaScript to validate your knowledge.</p>
+        <p>Classic coding problems with hidden test cases and instant auto-grading for JavaScript to validate your understanding.</p>
       </div>
-      
+
       <div class="feature-card">
         <div class="feature-icon-wrapper">⌨️</div>
-        <h3>Built-in Compiler</h3>
+        <h3>Multi-Language Compiler</h3>
         <p>Run JavaScript, Python, C++, and Java right in your browser. Experiment with algorithms without leaving the lesson.</p>
       </div>
-      
+
       <div class="feature-card">
         <div class="feature-icon-wrapper">🎯</div>
-        <h3>Interactive Patterns</h3>
-        <p>The 12 most important coding interview patterns taught as interactive slide decks you can swipe through and master.</p>
+        <h3>12 Interview Patterns</h3>
+        <p>The most important coding interview patterns taught as interactive slide decks you can swipe through and master.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">📊</div>
+        <h3>Personal Dashboard</h3>
+        <p>Track your progress with a heatmap, streak counter, acceptance rate, leaderboard ranking, and category breakdowns.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">🌙</div>
+        <h3>Three Themes</h3>
+        <p>Switch between dark, aurora, and light themes. Your preference syncs across sessions for a comfortable learning experience.</p>
       </div>
     </div>
   </section>
 
+  <!-- Tech Stack -->
+  <section class="tech-section reveal">
+    <div class="section-header">
+      <div class="section-badge">🛠️ Built With</div>
+      <h2>Modern, Lightweight Stack</h2>
+      <p>No heavy frameworks — just clean, fast code.</p>
+    </div>
+
+    <div class="tech-row">
+      <div class="tech-badge"><span class="tech-dot" style="background:#F7DF1E;"></span> JavaScript</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#68A063;"></span> Node.js</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#FFFFFF;"></span> Express</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#E34F26;"></span> HTML5</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#264DE4;"></span> CSS3</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#3DDBD9;"></span> V8 Sandbox</div>
+      <div class="tech-badge"><span class="tech-dot" style="background:#E8A33D;"></span> Wandbox API</div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <section class="cta-banner reveal">
+    <div class="cta-banner-inner">
+      <h2>Ready to start your DSA journey?</h2>
+      <p>Free, open, and no sign-up required. Just click and start learning.</p>
+      <a href="/app" class="cta-button primary">
+        Start Learning Now
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
   <footer>
+    <div class="footer-links">
+      <a href="/app">Platform</a>
+      <a href="/roadmap">Roadmap</a>
+      <a href="/login">Sign In</a>
+      <a href="https://github.com/anjana2201up/DSA_LEARNING_PLATFORM" target="_blank" rel="noopener">GitHub</a>
+    </div>
     <p>DSA Nexus — built with Node.js, Express, HTML, CSS &amp; vanilla JS.</p>
   </footer>
+
+  <!-- Particle animation + scroll reveal + counter animation -->
+  <script>
+  (function() {
+    // --- Particle constellation effect ---
+    const canvas = document.getElementById('particleCanvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      const PARTICLE_COUNT = 60;
+      const CONNECT_DIST = 120;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      class Particle {
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.vx = (Math.random() - 0.5) * 0.4;
+          this.vy = (Math.random() - 0.5) * 0.4;
+          this.r = Math.random() * 2 + 0.5;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(232, 163, 61, 0.4)';
+          ctx.fill();
+        }
+      }
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < CONNECT_DIST) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = `rgba(232, 163, 61, ${0.08 * (1 - dist / CONNECT_DIST)})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    // --- Animated stat counters ---
+    const counters = document.querySelectorAll('.stat-num[data-target]');
+    let countersAnimated = false;
+
+    function animateCounters() {
+      if (countersAnimated) return;
+      countersAnimated = true;
+      counters.forEach(counter => {
+        const target = parseInt(counter.dataset.target);
+        const suffix = counter.dataset.suffix || '+';
+        let current = 0;
+        const step = Math.max(1, Math.floor(target / 40));
+        const timer = setInterval(() => {
+          current += step;
+          if (current >= target) {
+            current = target;
+            clearInterval(timer);
+          }
+          counter.textContent = current + (current >= target ? suffix : '');
+        }, 30);
+      });
+    }
+
+    // Trigger counters when stats come into view
+    const statsObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) animateCounters();
+      });
+    }, { threshold: 0.3 });
+
+    const statsContainer = document.querySelector('.stats-container');
+    if (statsContainer) statsObserver.observe(statsContainer);
+
+    // --- Scroll reveal ---
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // --- Smooth scroll for nav links ---
+    document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  })();
+  </script>
 </body>
 </html>

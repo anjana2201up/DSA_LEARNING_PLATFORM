@@ -90,6 +90,14 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%, 45%, 75% { transform: translateX(-6px); }
+  30%, 60%, 90% { transform: translateX(6px); }
+}
+.shake { animation: shake 0.5s ease-in-out; }
+
 /* --- Left panel (branding) --- */
 .login-hero {
   flex: 1;
@@ -284,6 +292,10 @@ body {
   letter-spacing: 0.02em;
 }
 
+.input-wrapper {
+  position: relative;
+}
+
 .form-row input {
   padding: 12px 16px;
   border-radius: 10px;
@@ -294,6 +306,7 @@ body {
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
 }
 
 .form-row input::placeholder {
@@ -304,6 +317,60 @@ body {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(232,163,61,0.12);
 }
+
+/* Show/hide password toggle */
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.pw-toggle:hover { color: var(--text-muted); }
+
+/* Password strength meter */
+.pw-strength {
+  display: none;
+  margin-top: 8px;
+}
+
+.pw-strength.visible { display: block; }
+
+.pw-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.pw-strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+  width: 0%;
+}
+
+.pw-strength-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.pw-strength[data-level="weak"] .pw-strength-fill { width: 33%; background: var(--danger); }
+.pw-strength[data-level="weak"] .pw-strength-text { color: var(--danger); }
+
+.pw-strength[data-level="medium"] .pw-strength-fill { width: 66%; background: #FFC01E; }
+.pw-strength[data-level="medium"] .pw-strength-text { color: #FFC01E; }
+
+.pw-strength[data-level="strong"] .pw-strength-fill { width: 100%; background: var(--success); }
+.pw-strength[data-level="strong"] .pw-strength-text { color: var(--success); }
 
 /* Error box */
 .auth-error {
@@ -370,6 +437,20 @@ body {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Loading spinner */
+.auth-submit .spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid transparent;
+  border-top-color: var(--bg-dark);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Link back */
 .back-link {
@@ -464,7 +545,14 @@ body {
       </div>
       <div class="form-row">
         <label for="authPassword">Password</label>
-        <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••" required minlength="8" />
+        <div class="input-wrapper">
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••" required minlength="8" />
+          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password">👁</button>
+        </div>
+        <div class="pw-strength" id="pwStrength">
+          <div class="pw-strength-bar"><div class="pw-strength-fill"></div></div>
+          <span class="pw-strength-text" id="pwStrengthText"></span>
+        </div>
       </div>
       <div class="auth-error hidden" id="authError"></div>
       <div class="auth-success hidden" id="authSuccess">
@@ -481,7 +569,7 @@ body {
 </div>
 
 <!-- Auth module (reused from the app) -->
-<script src="/js/auth.js?v=4"></script>
+<script src="/js/auth.js?v=5"></script>
 <script>
 (function () {
   const form = document.getElementById("authForm");
@@ -492,8 +580,42 @@ body {
   const heading = document.getElementById("formHeading");
   const subheading = document.getElementById("formSubheading");
   const nameRow = document.getElementById("nameRow");
+  const pwInput = document.getElementById("authPassword");
+  const pwToggle = document.getElementById("pwToggle");
+  const pwStrength = document.getElementById("pwStrength");
+  const pwStrengthText = document.getElementById("pwStrengthText");
 
   let mode = "login";
+
+  // --- Show/Hide password toggle ---
+  pwToggle.addEventListener("click", () => {
+    const isPassword = pwInput.type === "password";
+    pwInput.type = isPassword ? "text" : "password";
+    pwToggle.textContent = isPassword ? "🙈" : "👁";
+  });
+
+  // --- Password strength meter ---
+  function checkStrength(pw) {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (score <= 2) return { level: "weak", text: "Weak — add uppercase, numbers, or symbols" };
+    if (score <= 3) return { level: "medium", text: "Medium — getting better, try adding more variety" };
+    return { level: "strong", text: "Strong — excellent password!" };
+  }
+
+  pwInput.addEventListener("input", () => {
+    if (mode !== "register") return;
+    const pw = pwInput.value;
+    if (!pw) { pwStrength.classList.remove("visible"); return; }
+    pwStrength.classList.add("visible");
+    const strength = checkStrength(pw);
+    pwStrength.dataset.level = strength.level;
+    pwStrengthText.textContent = strength.text;
+  });
 
   // Tab switching
   document.querySelectorAll(".auth-tab").forEach(tab => {
@@ -508,6 +630,17 @@ body {
       submitBtn.textContent = mode === "register" ? "Create Account" : "Sign In";
       errBox.classList.add("hidden");
       successBox.classList.add("hidden");
+      // Show/hide password strength meter
+      if (mode === "register" && pwInput.value) {
+        pwStrength.classList.add("visible");
+        const strength = checkStrength(pwInput.value);
+        pwStrength.dataset.level = strength.level;
+        pwStrengthText.textContent = strength.text;
+      } else {
+        pwStrength.classList.remove("visible");
+      }
+      // Update autocomplete hint
+      pwInput.setAttribute("autocomplete", mode === "register" ? "new-password" : "current-password");
     });
   });
 
@@ -517,7 +650,7 @@ body {
     errBox.classList.add("hidden");
     successBox.classList.add("hidden");
     submitBtn.disabled = true;
-    submitBtn.textContent = mode === "register" ? "Creating account…" : "Signing in…";
+    submitBtn.innerHTML = `<span class="spinner"></span>${mode === "register" ? "Creating account…" : "Signing in…"}`;
 
     const email = document.getElementById("authEmail").value.trim();
     const password = document.getElementById("authPassword").value;
@@ -536,6 +669,9 @@ body {
     } catch (err) {
       errBox.textContent = err.message;
       errBox.classList.remove("hidden");
+      // Shake animation on error
+      form.classList.add("shake");
+      setTimeout(() => form.classList.remove("shake"), 500);
       submitBtn.disabled = false;
       submitBtn.textContent = mode === "register" ? "Create Account" : "Sign In";
     }
@@ -559,7 +695,7 @@ body {
           try {
             errBox.classList.add("hidden");
             submitBtn.disabled = true;
-            submitBtn.textContent = "Signing in with Google…";
+            submitBtn.innerHTML = '<span class="spinner"></span>Signing in with Google…';
             await Auth.loginWithGoogleIdToken(response.credential);
             successText.textContent = "Google sign-in successful! Redirecting…";
             successBox.classList.remove("hidden");

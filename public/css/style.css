@@ -814,3 +814,244 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   font-family: var(--font-display); font-weight: 600; font-size: 0.88rem;
   color: var(--accent-2); white-space: nowrap;
 }
+
+/* ===================================================================
+   Toast Notification System
+   =================================================================== */
+.toast-container {
+  position: fixed;
+  top: 80px; right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 380px;
+  animation: toastSlideIn 0.4s ease-out both;
+  position: relative;
+  overflow: hidden;
+}
+
+.toast::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 3px;
+  background: var(--accent);
+  animation: toastTimer 4s linear both;
+}
+
+.toast.toast-success { border-color: rgba(111,207,151,0.3); }
+.toast.toast-success::after { background: var(--success); }
+.toast.toast-success .toast-icon { color: var(--success); }
+
+.toast.toast-error { border-color: rgba(232,97,92,0.3); }
+.toast.toast-error::after { background: var(--danger); }
+.toast.toast-error .toast-icon { color: var(--danger); }
+
+.toast.toast-info { border-color: rgba(61,219,217,0.3); }
+.toast.toast-info::after { background: var(--accent-2); }
+.toast.toast-info .toast-icon { color: var(--accent-2); }
+
+.toast.toast-exit { animation: toastSlideOut 0.3s ease-in both; }
+
+.toast-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
+
+@keyframes toastTimer {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* ===================================================================
+   Page Transition Animation
+   =================================================================== */
+.content.page-enter {
+  animation: pageEnter 0.35s ease-out both;
+}
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Skeleton loading state */
+.skeleton-block {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s infinite;
+  border-radius: 8px;
+  min-height: 16px;
+}
+
+@keyframes skeletonPulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ===================================================================
+   Problem List Filters
+   =================================================================== */
+.problem-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.diff-filter-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.diff-filter-tab {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diff-filter-tab.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.diff-filter-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+.problem-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.problem-search::placeholder { color: var(--text-faint); }
+.problem-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.solved-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.solved-filter:hover { border-color: var(--accent); color: var(--text); }
+.solved-filter.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.filter-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-faint);
+  margin-left: 4px;
+}
+
+/* ===================================================================
+   Animated Stat Numbers (Dashboard)
+   =================================================================== */
+.lc-stat-number.counting {
+  transition: none;
+}
+
+/* Recent Submissions Table */
+.submissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.submissions-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.submissions-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.submissions-table tr:hover td {
+  background: var(--surface-2);
+}
+
+.sub-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sub-status.pass {
+  background: rgba(111,207,151,0.12);
+  color: var(--success);
+}
+
+.sub-status.fail {
+  background: var(--danger-soft);
+  color: var(--danger);
+}

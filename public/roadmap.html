@@ -21,7 +21,7 @@
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.6;}
   a{color:inherit;}
-  .wrap{max-width:1100px;margin:0 auto;padding:60px 24px 100px;}
+  .wrap{max-width:1100px;margin:0 auto;padding:100px 24px 100px;}
   header.page-head{text-align:center;padding:50px 24px 20px;}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:0.78rem;color:var(--accent-2);background:var(--accent-2-soft);padding:6px 16px;border-radius:999px;margin-bottom:20px;}
   h1{font-family:var(--font-display);font-size:clamp(2rem,5vw,3rem);margin:0 0 14px;font-weight:700;letter-spacing:-0.02em;}
@@ -91,12 +91,51 @@
   .back-link:hover{opacity:0.8;}
 
   footer{text-align:center;padding:50px 24px 20px;color:var(--text-faint);font-size:0.8rem;border-top:1px solid var(--border);margin-top:60px;}
+
+  /* Navigation bar */
+  .roadmap-nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 40px; background:rgba(15,18,26,0.85);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+  }
+  .roadmap-nav .nav-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .roadmap-nav .nav-brand-mark { font-family:var(--font-mono); font-size:1.1rem; color:var(--accent-2); font-weight:600; }
+  .roadmap-nav .nav-brand-name { font-family:var(--font-display); font-size:1.2rem; font-weight:700; color:var(--text); }
+  .roadmap-nav .nav-brand-name em { font-style:normal; color:var(--accent); }
+  .roadmap-nav .nav-links { display:flex; align-items:center; gap:20px; }
+  .roadmap-nav .nav-link { color:var(--text-muted); text-decoration:none; font-size:0.85rem; font-weight:500; transition:color 0.2s; }
+  .roadmap-nav .nav-link:hover { color:var(--text); }
+  .roadmap-nav .nav-cta { padding:8px 18px; border-radius:8px; background:linear-gradient(135deg,var(--accent),#d4891e); color:var(--bg); text-decoration:none; font-family:var(--font-display); font-weight:700; font-size:0.8rem; }
+
+  /* Scroll reveal */
+  .step, .pcard, .cloud a { opacity:0; transform:translateY(20px); transition:opacity 0.5s ease, transform 0.5s ease; }
+  .step.visible, .pcard.visible, .cloud a.visible { opacity:1; transform:translateY(0); }
+
+  /* Background glow */
+  .bg-glow { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:-1; pointer-events:none;
+    background: radial-gradient(circle at 30% 20%, rgba(232,163,61,0.06), transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(61,219,217,0.05), transparent 40%);
+  }
+
+  @media(max-width:640px){ .roadmap-nav { padding:12px 16px; } .roadmap-nav .nav-link { display:none; } }
 </style>
 </head>
 <body>
+<div class="bg-glow"></div>
+
+<!-- Navigation -->
+<nav class="roadmap-nav">
+  <a href="/" class="nav-brand"><span class="nav-brand-mark">&lt;/&gt;</span><span class="nav-brand-name">DSA <em>Nexus</em></span></a>
+  <div class="nav-links">
+    <a href="/app" class="nav-link">Platform</a>
+    <a href="/app#/problems" class="nav-link">Problems</a>
+    <a href="/login" class="nav-cta">Sign In</a>
+  </div>
+</nav>
 
 <div class="wrap">
-  <a href="/" class="back-link">&larr; Back to Home</a>
 
   <header class="page-head">
     <div class="eyebrow">&#x1f5fa;&#xfe0f; DSA Roadmap</div>
@@ -231,6 +270,21 @@ FAMILIES.forEach(function(f) {
   a.href = "#";
   a.innerHTML = '<span class="dot" style="background:' + f.color + '"></span>' + f.name;
   cloudEl.appendChild(a);
+});
+
+// Scroll reveal
+var revealObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      setTimeout(function() { entry.target.classList.add('visible'); }, 50);
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.step, .pcard, .cloud a').forEach(function(el, i) {
+  el.style.transitionDelay = (i % 6) * 0.06 + 's';
+  revealObserver.observe(el);
 });
 </script>
 </body>

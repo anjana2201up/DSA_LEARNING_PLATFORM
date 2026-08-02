@@ -23,6 +23,30 @@ const state = {
 const contentEl = document.getElementById("content");
 const sidebarContentEl = document.getElementById("sidebarContent");
 
+// ---- Toast notification system ----
+function showToast(message, type = "info", durationMs = 4000) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const icons = { success: "✓", error: "✗", info: "ℹ" };
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>${escapeHtml(message)}`;
+  toast.style.setProperty('--toast-duration', durationMs + 'ms');
+  toast.querySelector('.toast-icon');
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("toast-exit");
+    setTimeout(() => toast.remove(), 300);
+  }, durationMs);
+}
+
+// ---- Page transition helper ----
+function animatePageIn() {
+  contentEl.classList.remove("page-enter");
+  void contentEl.offsetWidth; // force reflow
+  contentEl.classList.add("page-enter");
+}
+
 async function boot() {
   const [catRes, topicRes, patternRes] = await Promise.all([
     fetch("/api/categories").then(r => r.json()),
@@ -40,11 +64,12 @@ async function boot() {
   wireTheme();
   wireAuthArea();
   wireAuthModal();
-  window.addEventListener("hashchange", route);
-  window.addEventListener("hashchange", updatePrimaryNavActive);
+  window.addEventListener("hashchange", routeWithAnimation);
+  window.addEventListener("hashchange", () => { updatePrimaryNavActive(); });
   window.addEventListener("auth:changed", wireAuthArea);
   window.addEventListener("keydown", handleGlobalKeydown);
   route();
+  animatePageIn();
   updatePrimaryNavActive();
 }
 
@@ -123,6 +148,14 @@ function route() {
   if (path === "terminal") return renderTerminalPage();
   if (path === "feedback") return renderFeedback();
   return renderHome();
+}
+
+// Wrap route calls to animate page transitions
+const _originalRoute = route;
+// We override the hashchange callback to add animation
+function routeWithAnimation() {
+  _originalRoute();
+  animatePageIn();
 }
 
 // ---------------- Home ----------------
@@ -624,10 +657,33 @@ async function renderDashboard() {
       </div>
     </div>
 
+    <!-- Recent Submissions -->
+    ${(stats.recentSubmissions && stats.recentSubmissions.length) ? `
+    <div class="lc-chart-card" style="margin-bottom:24px;">
+      <h2 class="lc-section-title">📝 Recent Submissions</h2>
+      <div style="overflow-x:auto;">
+        <table class="submissions-table">
+          <thead><tr><th>Problem</th><th>Difficulty</th><th>Language</th><th>Status</th><th>Time</th></tr></thead>
+          <tbody>
+            ${stats.recentSubmissions.slice(0, 10).map(s => `
+              <tr>
+                <td>${escapeHtml(s.title || s.problemId)}</td>
+                <td><span class="diff-badge diff-${s.difficulty}" style="font-size:0.7rem;">${s.difficulty}</span></td>
+                <td style="font-family:var(--font-mono); font-size:0.8rem;">${s.language}</td>
+                <td><span class="sub-status ${s.pass ? 'pass' : 'fail'}">${s.pass ? '✓ Accepted' : '✗ Failed'}</span></td>
+                <td style="color:var(--text-faint); font-size:0.8rem; white-space:nowrap;">${new Date(s.timestamp).toLocaleDateString()}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-faint); font-size:0.8rem; margin-top:10px;">Acceptance rate: <b style="color:var(--accent);">${stats.acceptanceRate}%</b> (${stats.totalSubmissions} total)</p>
+    </div>` : ``}
+
     <!-- Two-column: Recent Activity + Leaderboard -->
     <div class="lc-bottom-row">
       <div class="lc-chart-card">
-        <h2 class="lc-section-title">📝 Recent Activity</h2>
+        <h2 class="lc-section-title">📋 Recently Completed Topics</h2>
         ${recent.length ? `<ul class="lc-activity-list">
           ${recent.map(([topicId, ts]) => {
             const t = state.topics.find(x => x.id === topicId);
@@ -746,8 +802,13 @@ async function renderDashboard() {
   });
   document.getElementById("saveProfileBtn").addEventListener("click", async () => {
     const name = document.getElementById("editNameInput").value.trim();
-    try { await Auth.updateProfile({ name, avatar: selectedAvatar }); renderDashboard(); wireAuthArea(); }
-    catch (err) { alert(err.message); }
+    try {
+      await Auth.updateProfile({ name, avatar: selectedAvatar });
+      showToast("Profile updated successfully!", "success");
+      renderDashboard(); wireAuthArea();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
   });
 
   window.scrollTo(0, 0);
@@ -761,20 +822,76 @@ async function renderProblemsList() {
   const data = await res.json();
   const solved = window.Auth && Auth.isSignedIn() ? (Auth.getUser()?.progress?.solvedProblems || []) : [];
 
+  const easyCount = data.problems.filter(p => p.difficulty.toLowerCase() === 'easy').length;
+  const mediumCount = data.problems.filter(p => p.difficulty.toLowerCase() === 'medium').length;
+  const hardCount = data.problems.filter(p => p.difficulty.toLowerCase() === 'hard').length;
+
   contentEl.innerHTML = `
     <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>Problems</div>
     <h1 style="font-family:var(--font-display);">🧩 Practice Problems</h1>
-    <p style="color:var(--text-muted); margin-bottom:24px;">${data.total} classic problems. JavaScript submissions are auto-graded against hidden test cases; other available languages can be run freely.</p>
-    <div class="problem-grid">
-      ${data.problems.map(p => `
-        <a class="problem-row" href="#/problem/${p.id}">
-          <span class="diff-badge diff-${p.difficulty}">${p.difficulty}</span>
-          <span class="pr-title">${p.title}</span>
-          <span class="pr-tags">${p.tags.map(t => `<span class="pr-tag">${t}</span>`).join("")}</span>
-          ${solved.includes(p.id) ? `<span class="pr-solved">✓ Solved</span>` : ""}
-        </a>`).join("")}
+    <p style="color:var(--text-muted); margin-bottom:20px;">${data.total} classic problems. JavaScript submissions are auto-graded against hidden test cases; other available languages can be run freely.</p>
+    <div class="problem-filters">
+      <div class="diff-filter-tabs">
+        <button class="diff-filter-tab active" data-diff="all" type="button">All<span class="filter-count">${data.total}</span></button>
+        <button class="diff-filter-tab" data-diff="easy" type="button">Easy<span class="filter-count">${easyCount}</span></button>
+        <button class="diff-filter-tab" data-diff="medium" type="button">Medium<span class="filter-count">${mediumCount}</span></button>
+        <button class="diff-filter-tab" data-diff="hard" type="button">Hard<span class="filter-count">${hardCount}</span></button>
+      </div>
+      <input type="text" class="problem-search" id="problemSearch" placeholder="Search problems…" />
+      <button class="solved-filter" id="solvedFilter" type="button">✓ Show Solved Only</button>
+    </div>
+    <div class="problem-grid" id="problemGrid">
+      ${renderProblemRows(data.problems, solved)}
     </div>`;
+
+  // Wire up filters
+  const grid = document.getElementById("problemGrid");
+  let currentDiff = "all";
+  let currentSearch = "";
+  let showSolvedOnly = false;
+
+  function applyFilters() {
+    const filtered = data.problems.filter(p => {
+      const matchDiff = currentDiff === "all" || p.difficulty.toLowerCase() === currentDiff;
+      const matchSearch = !currentSearch || p.title.toLowerCase().includes(currentSearch) || p.tags.some(t => t.toLowerCase().includes(currentSearch));
+      const matchSolved = !showSolvedOnly || solved.includes(p.id);
+      return matchDiff && matchSearch && matchSolved;
+    });
+    grid.innerHTML = renderProblemRows(filtered, solved);
+  }
+
+  document.querySelectorAll(".diff-filter-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".diff-filter-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentDiff = tab.dataset.diff;
+      applyFilters();
+    });
+  });
+
+  document.getElementById("problemSearch").addEventListener("input", (e) => {
+    currentSearch = e.target.value.toLowerCase().trim();
+    applyFilters();
+  });
+
+  document.getElementById("solvedFilter").addEventListener("click", (e) => {
+    showSolvedOnly = !showSolvedOnly;
+    e.currentTarget.classList.toggle("active", showSolvedOnly);
+    applyFilters();
+  });
+
   window.scrollTo(0, 0);
+}
+
+function renderProblemRows(problems, solved) {
+  if (!problems.length) return `<p style="color:var(--text-muted); padding:20px 0;">No problems match your filters.</p>`;
+  return problems.map(p => `
+    <a class="problem-row" href="#/problem/${p.id}">
+      <span class="diff-badge diff-${p.difficulty}">${p.difficulty}</span>
+      <span class="pr-title">${p.title}</span>
+      <span class="pr-tags">${p.tags.map(t => `<span class="pr-tag">${t}</span>`).join("")}</span>
+      ${solved.includes(p.id) ? `<span class="pr-solved">✓ Solved</span>` : ""}
+    </a>`).join("");
 }
 
 async function renderProblemDetail(id) {
@@ -867,8 +984,10 @@ function renderFeedback() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not send feedback.");
+      showToast("Thank you for your feedback!", "success");
       contentEl.innerHTML = `<div class="feedback-thanks"><h2>🙏 Thank you!</h2><p style="color:var(--text-muted);">Your feedback helps make this better.</p><a href="#/" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">Back home</a></div>`;
     } catch (err) {
+      showToast(err.message, "error");
       errBox.textContent = err.message; errBox.classList.remove("hidden");
     }
   });

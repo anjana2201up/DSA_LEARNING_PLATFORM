@@ -10,6 +10,28 @@ const store = require("../lib/userStore");
 
 const router = express.Router();
 
+// Falls back to a generated-at-boot secret if JWT_SECRET isn't set, so the
+// app never silently 500s on every auth call — but this fallback does NOT
+// survive a restart (every deploy/cold-start invalidates existing tokens),
+// so set a real JWT_SECRET in your environment for production.
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  JWT_SECRET = require("crypto").randomBytes(48).toString("hex");
+  console.warn(
+    "[auth] JWT_SECRET is not set in the environment — using a random secret generated at boot.\n" +
+    "  Existing sessions will be invalidated on every restart/deploy. Set JWT_SECRET in your\n" +
+    "  environment (.env locally, or your host's dashboard in production) to fix this."
+  );
+}
+
+function friendlyAuthError(res, err, fallbackMsg) {
+  if (err && err.code === "USERSTORE_WRITE_FAILED") {
+    return res.status(503).json({ error: err.message });
+  }
+  console.error(fallbackMsg + ":", err);
+  return res.status(500).json({ error: "Internal server error." });
+}
+
 // ---------- Auth Routes ----------
 
 router.post("/register", async (req, res) => {
@@ -27,11 +49,10 @@ router.post("/register", async (req, res) => {
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = store.createUser({ name, email, passwordHash });
-    const token = jwt.sign({ sub: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({ token, user: store.publicUser(user) });
   } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ error: "Internal server error." });
+    friendlyAuthError(res, err, "Register error");
   }
 });
 
@@ -49,11 +70,10 @@ router.post("/login", async (req, res) => {
     if (!match) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
-    const token = jwt.sign({ sub: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
     res.json({ token, user: store.publicUser(user) });
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Internal server error." });
+    friendlyAuthError(res, err, "Login error");
   }
 });
 
@@ -86,9 +106,12 @@ router.post("/google", async (req, res) => {
         user = store.createUser({ name, email, googleId });
       }
     }
-    const token = jwt.sign({ sub: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
     res.json({ token, user: store.publicUser(user) });
   } catch (err) {
+    if (err && err.code === "USERSTORE_WRITE_FAILED") {
+      return res.status(503).json({ error: err.message });
+    }
     console.error("Google Sign-In error:", err);
     res.status(400).json({ error: "Google sign-in failed: " + err.message });
   }
@@ -111,7 +134,7 @@ const requireAuth = (req, res, next) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -124,7 +147,7 @@ const optionalAuth = (req, res, next) => {
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
     } catch (err) {
       // Ignored for optional auth

@@ -16,22 +16,34 @@ router.get("/", requireAuth, (req, res) => {
 });
 
 router.put("/", requireAuth, (req, res) => {
-  const { name, avatar } = req.body || {};
-  const patch = {};
-  if (typeof name === "string" && name.trim()) patch.name = name.trim().slice(0, 60);
-  if (typeof avatar === "string") patch.avatar = avatar.slice(0, 8);
-  const user = store.updateUser(req.user.sub, patch);
-  if (!user) return res.status(404).json({ error: "User not found." });
-  res.json({ user: store.publicUser(user) });
+  try {
+    const { name, avatar } = req.body || {};
+    const patch = {};
+    if (typeof name === "string" && name.trim()) patch.name = name.trim().slice(0, 60);
+    if (typeof avatar === "string") patch.avatar = avatar.slice(0, 8);
+    const user = store.updateUser(req.user.sub, patch);
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.json({ user: store.publicUser(user) });
+  } catch (err) {
+    if (err && err.code === "USERSTORE_WRITE_FAILED") return res.status(503).json({ error: err.message });
+    console.error("Profile update error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
 });
 
 // Merge-sync progress from the client (e.g. localStorage progress made while
 // signed out, or a new completion/bookmark toggle) into the account.
 router.put("/progress", requireAuth, (req, res) => {
-  const { completed, bookmarks, solvedProblemId } = req.body || {};
-  const user = store.updateProgress(req.user.sub, { completed, bookmarks, solvedProblemId });
-  if (!user) return res.status(404).json({ error: "User not found." });
-  res.json({ progress: user.progress, stats: buildStats(user) });
+  try {
+    const { completed, bookmarks, solvedProblemId } = req.body || {};
+    const user = store.updateProgress(req.user.sub, { completed, bookmarks, solvedProblemId });
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.json({ progress: user.progress, stats: buildStats(user) });
+  } catch (err) {
+    if (err && err.code === "USERSTORE_WRITE_FAILED") return res.status(503).json({ error: err.message });
+    console.error("Progress sync error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
 });
 
 function buildStats(user) {
