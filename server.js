@@ -109,6 +109,13 @@ app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "welcome.
 app.get("/roadmap", (req, res) => res.sendFile(path.join(__dirname, "public", "roadmap.html")));
 app.get(["/app", "/app/*"], (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get(["/login", "/signin", "/register", "/signup"], (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/games", (req, res) => res.sendFile(path.join(__dirname, "public", "games-hub.html")));
+app.get(["/games/tic-tac-toe", "/play/tic-tac-toe"], (req, res) => res.sendFile(path.join(__dirname, "public", "tic-tac-toe.html")));
+app.get("/games/rock-paper-scissors", (req, res) => res.sendFile(path.join(__dirname, "public", "rock-paper-scissors.html")));
+app.get("/games/word-game", (req, res) => res.sendFile(path.join(__dirname, "public", "word-game.html")));
+app.get("/games/sudoku", (req, res) => res.sendFile(path.join(__dirname, "public", "sudoku.html")));
+app.get("/games/snake-and-ladder", (req, res) => res.sendFile(path.join(__dirname, "public", "snake-and-ladder.html")));
+app.get("/games/memory-match", (req, res) => res.sendFile(path.join(__dirname, "public", "memory-match.html")));
 
 app.get("*", (req, res) => res.redirect("/"));
 

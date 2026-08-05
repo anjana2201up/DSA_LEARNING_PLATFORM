@@ -682,15 +682,23 @@ body {
     const host = document.getElementById("googleSignInHost");
     const config = await Auth.fetchGoogleConfig();
     if (!config.googleEnabled) {
-      host.innerHTML = '<div class="google-signin-fallback">Google Sign-In not configured on this server — use email/password instead.</div>';
+      host.innerHTML = '<div class="google-signin-fallback">Google Sign-In is not enabled on this server — sign in with email & password below.</div>';
       return;
     }
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
+    script.onerror = () => {
+      host.innerHTML = '<div class="google-signin-fallback">Google Sign-In script failed to load (offline or blocked) — use email/password instead.</div>';
+    };
     script.onload = () => {
+      if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
+        host.innerHTML = '<div class="google-signin-fallback">Google Identity API not available — use email/password instead.</div>';
+        return;
+      }
       google.accounts.id.initialize({
         client_id: config.googleClientId,
+        ux_mode: "popup",
         callback: async (response) => {
           try {
             errBox.classList.add("hidden");
@@ -708,8 +716,9 @@ body {
           }
         }
       });
+      const btnWidth = Math.min(host.clientWidth || 360, 360);
       google.accounts.id.renderButton(host, {
-        theme: "outline", size: "large", width: 360,
+        theme: "outline", size: "large", width: btnWidth,
         text: "signin_with", shape: "pill"
       });
     };

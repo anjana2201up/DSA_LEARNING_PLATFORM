@@ -9,19 +9,19 @@ const ALL_PROBLEMS = [...PROBLEMS, ...PROBLEMS_EXTRA];
 
 const router = express.Router();
 
-router.get("/", requireAuth, (req, res) => {
-  const user = store.findById(req.user.sub);
+router.get("/", requireAuth, async (req, res) => {
+  const user = await store.findById(req.user.sub);
   if (!user) return res.status(404).json({ error: "User not found." });
   res.json({ user: store.publicUser(user), stats: buildStats(user) });
 });
 
-router.put("/", requireAuth, (req, res) => {
+router.put("/", requireAuth, async (req, res) => {
   try {
     const { name, avatar } = req.body || {};
     const patch = {};
     if (typeof name === "string" && name.trim()) patch.name = name.trim().slice(0, 60);
     if (typeof avatar === "string") patch.avatar = avatar.slice(0, 8);
-    const user = store.updateUser(req.user.sub, patch);
+    const user = await store.updateUser(req.user.sub, patch);
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json({ user: store.publicUser(user) });
   } catch (err) {
@@ -33,10 +33,10 @@ router.put("/", requireAuth, (req, res) => {
 
 // Merge-sync progress from the client (e.g. localStorage progress made while
 // signed out, or a new completion/bookmark toggle) into the account.
-router.put("/progress", requireAuth, (req, res) => {
+router.put("/progress", requireAuth, async (req, res) => {
   try {
     const { completed, bookmarks, solvedProblemId } = req.body || {};
-    const user = store.updateProgress(req.user.sub, { completed, bookmarks, solvedProblemId });
+    const user = await store.updateProgress(req.user.sub, { completed, bookmarks, solvedProblemId });
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json({ progress: user.progress, stats: buildStats(user) });
   } catch (err) {
@@ -91,8 +91,8 @@ function buildStats(user) {
   };
 }
 
-router.get("/leaderboard", (req, res) => {
-  const users = store.getAllPublicUsers();
+router.get("/leaderboard", async (req, res) => {
+  const users = await store.getAllPublicUsers();
   const ranked = users.map(u => ({
     id: u.id,
     name: u.name,

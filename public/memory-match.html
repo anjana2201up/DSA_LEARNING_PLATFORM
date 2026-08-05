@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Memory Match</title>
+<meta name="description" content="Test your memory with DSA concepts." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+  .game-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; z-index: 10; max-width: 800px; margin: 0 auto; width: 100%; }
+  .game-header { text-align: center; margin-bottom: 30px; }
+  .game-header h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0; }
+  .game-header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 8px; }
+  
+  .dashboard { display: flex; gap: 40px; margin-bottom: 30px; background: var(--surface); padding: 15px 30px; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .stat-box { text-align: center; }
+  .stat-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+  .stat-value { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--text); }
+  .stat-value.highlight { color: var(--accent-2); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+    perspective: 1000px;
+  }
+  
+  .card {
+    width: 80px;
+    height: 80px;
+    cursor: pointer;
+    position: relative;
+    border-radius: var(--radius);
+  }
+  
+  .card-inner {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+  }
+  
+  .card.flipped .card-inner {
+    transform: rotateY(180deg);
+  }
+  
+  .card-front, .card-back {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  
+  /* The "front" of the card is what you see when it's face down */
+  .card-front {
+    background: var(--surface-3);
+    border: 2px solid var(--border-strong);
+    font-size: 2rem;
+    color: var(--text-faint);
+  }
+  
+  .card:hover .card-front {
+    background: var(--surface-2);
+    border-color: var(--accent);
+  }
+  
+  /* The "back" of the card is what you see when flipped (the emoji) */
+  .card-back {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    transform: rotateY(180deg);
+    font-size: 2.5rem;
+  }
+  
+  .card.matched .card-back {
+    border-color: var(--success);
+    background: var(--success-soft);
+  }
+
+  .game-message { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; min-height: 35px; text-align: center; margin-bottom: 20px; color: var(--success); }
+
+  .standalone-nav { position: absolute; top: 20px; left: 20px; z-index: 100; }
+
+  @media (max-width: 500px) {
+    .card { width: 65px; height: 65px; }
+    .card-back { font-size: 2rem; }
+    .grid { gap: 10px; }
+  }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div class="bubble-field"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span></div>
+
+<div class="standalone-nav">
+  <a href="/games" class="btn btn-ghost">← Back to Hub</a>
+</div>
+
+<main class="game-container">
+  <div class="game-header">
+    <h1>Memory <span class="accent">Match</span></h1>
+    <p>Find the matching pairs in the fewest moves.</p>
+  </div>
+
+  <div class="dashboard">
+    <div class="stat-box">
+      <div class="stat-label">Moves</div>
+      <div class="stat-value highlight" id="moves">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Best Score</div>
+      <div class="stat-value" id="best-score">-</div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid">
+    <!-- Cards generated via JS -->
+  </div>
+  
+  <div class="game-message" id="message"></div>
+
+  <button class="btn btn-primary" id="btn-restart">Restart Game</button>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const gridEl = document.getElementById('grid');
+  const movesEl = document.getElementById('moves');
+  const bestScoreEl = document.getElementById('best-score');
+  const msgEl = document.getElementById('message');
+  const btnRestart = document.getElementById('btn-restart');
+  
+  // DSA themed emojis
+  const EMOJIS = ['🌳', '🕸️', '📦', '🔗', '📚', '🗺️', '🚦', '🧩'];
+  
+  let cards = [];
+  let flippedCards = [];
+  let matchedPairs = 0;
+  let moves = 0;
+  let lockBoard = false;
+  let bestScore = null;
+  
+  try {
+    const saved = localStorage.getItem('dsa-nexus:memory-best');
+    if (saved) {
+      bestScore = parseInt(saved);
+      bestScoreEl.textContent = bestScore;
+    }
+  } catch(e) {}
+
+  function initGame() {
+    gridEl.innerHTML = '';
+    cards = [];
+    flippedCards = [];
+    matchedPairs = 0;
+    moves = 0;
+    lockBoard = false;
+    movesEl.textContent = moves;
+    msgEl.textContent = '';
+    
+    // Create pairs and shuffle
+    const deck = [...EMOJIS, ...EMOJIS];
+    deck.sort(() => 0.5 - Math.random());
+    
+    deck.forEach((emoji, index) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.emoji = emoji;
+      card.dataset.index = index;
+      
+      const inner = document.createElement('div');
+      inner.className = 'card-inner';
+      
+      const front = document.createElement('div');
+      front.className = 'card-front';
+      front.textContent = '❓';
+      
+      const back = document.createElement('div');
+      back.className = 'card-back';
+      back.textContent = emoji;
+      
+      inner.appendChild(front);
+      inner.appendChild(back);
+      card.appendChild(inner);
+      
+      card.addEventListener('click', () => flipCard(card));
+      
+      gridEl.appendChild(card);
+      cards.push(card);
+    });
+  }
+
+  function flipCard(card) {
+    if (lockBoard) return;
+    if (card === flippedCards[0]) return; // Can't click same card twice
+    if (card.classList.contains('matched')) return;
+    
+    card.classList.add('flipped');
+    flippedCards.push(card);
+    
+    if (flippedCards.length === 2) {
+      moves++;
+      movesEl.textContent = moves;
+      checkForMatch();
+    }
+  }
+
+  function checkForMatch() {
+    const [card1, card2] = flippedCards;
+    const isMatch = card1.dataset.emoji === card2.dataset.emoji;
+    
+    if (isMatch) {
+      disableCards();
+    } else {
+      unflipCards();
+    }
+  }
+
+  function disableCards() {
+    flippedCards[0].classList.add('matched');
+    flippedCards[1].classList.add('matched');
+    
+    matchedPairs++;
+    flippedCards = [];
+    
+    if (matchedPairs === EMOJIS.length) {
+      setTimeout(() => {
+        msgEl.textContent = 'You win! 🎉';
+        
+        if (bestScore === null || moves < bestScore) {
+          bestScore = moves;
+          bestScoreEl.textContent = bestScore;
+          try {
+            localStorage.setItem('dsa-nexus:memory-best', bestScore);
+          } catch(e) {}
+          msgEl.textContent = 'New Best Score! 🎉';
+        }
+      }, 500);
+    }
+  }
+
+  function unflipCards() {
+    lockBoard = true;
+    
+    setTimeout(() => {
+      flippedCards[0].classList.remove('flipped');
+      flippedCards[1].classList.remove('flipped');
+      
+      flippedCards = [];
+      lockBoard = false;
+    }, 1000);
+  }
+
+  btnRestart.addEventListener('click', initGame);
+
+  initGame();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Games Hub</title>
+<meta name="description" content="Take a break with algorithm-powered mini games." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .games-hub-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    z-index: 10;
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .hub-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .hub-header h1 {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    margin: 0;
+  }
+  .hub-header p {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    margin-top: 12px;
+  }
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+  }
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 30px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  .game-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+  }
+  .game-card:hover .icon-container {
+    background: var(--accent-soft);
+    color: var(--accent);
+    transform: scale(1.1);
+  }
+  .icon-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+  }
+  .game-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+  .game-desc {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    flex: 1;
+  }
+  .play-btn {
+    display: inline-block;
+    padding: 8px 24px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-strong);
+    transition: all 0.2s;
+  }
+  .game-card:hover .play-btn {
+    background: var(--accent);
+    color: #1A1305;
+    border-color: var(--accent);
+  }
+
+  .standalone-nav {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+  }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div class="bubble-field"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span></div>
+
+<div class="standalone-nav">
+  <a href="/app" class="btn btn-ghost">← Back to Learning</a>
+</div>
+
+<main class="games-hub-container">
+  <div class="hub-header">
+    <h1>Take a <span class="accent">Break</span></h1>
+    <p>Refresh your mind with these interactive minigames.</p>
+  </div>
+
+  <div class="games-grid">
+    <a href="/games/tic-tac-toe" class="game-card">
+      <div class="icon-container">❌</div>
+      <h2 class="game-title">Tic-Tac-Toe</h2>
+      <p class="game-desc">Play against an unbeatable Minimax AI or challenge a friend locally.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+
+    <a href="/games/rock-paper-scissors" class="game-card">
+      <div class="icon-container">✂️</div>
+      <h2 class="game-title">Rock Paper Scissors</h2>
+      <p class="game-desc">A classic duel against the computer. Best of 3, 5 or endless modes.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+
+    <a href="/games/word-game" class="game-card">
+      <div class="icon-container">🔎</div>
+      <h2 class="game-title">Word Search Puzzle</h2>
+      <p class="game-desc">Find the hidden DSA terms in the matrix. Click the start and end letters to select a word.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+
+    <a href="/games/sudoku" class="game-card">
+      <div class="icon-container">🔢</div>
+      <h2 class="game-title">Sudoku Solver</h2>
+      <p class="game-desc">Play classic Sudoku or let the recursive backtracking algorithm solve it instantly.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+
+    <a href="/games/snake-and-ladder" class="game-card">
+      <div class="icon-container">🐍</div>
+      <h2 class="game-title">Snake & Ladder</h2>
+      <p class="game-desc">Race to 100 against the computer in this grid-based classic board game.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+
+    <a href="/games/memory-match" class="game-card">
+      <div class="icon-container">🧠</div>
+      <h2 class="game-title">Memory Match</h2>
+      <p class="game-desc">Test your memory by finding matching pairs of DSA-themed cards as quickly as possible.</p>
+      <span class="play-btn">Play Now</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

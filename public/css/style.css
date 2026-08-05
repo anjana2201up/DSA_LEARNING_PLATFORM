@@ -18,6 +18,12 @@
   --accent: #E8A33D;
   --accent-soft: rgba(232,163,61,0.15);
   --accent-2: #3DDBD9;
+  /* Editor/terminal surfaces are ALWAYS dark, regardless of page theme -
+     conventional (matches every real code editor/terminal) and fixes a
+     real bug: these used to hardcode #0D0F16 with color:var(--text), which
+     in the light theme meant near-black text on a near-black background. */
+  --editor-bg: #0D0F16;
+  --editor-text: #E9EAF2;
   --accent-2-soft: rgba(61,219,217,0.14);
   --success: #6FCF97;
   --danger: #E8615C;
@@ -52,6 +58,8 @@
   --success: #2E9F5E;
   --danger: #C9433D;
   --danger-soft: rgba(201,67,61,0.1);
+  --editor-bg: #12141C;
+  --editor-text: #E9EAF2;
 }
 
 /* Aurora theme — dark purple / pistachio green / dark blue / dark pink, with
@@ -74,6 +82,8 @@
   --success: #8FE3A8;
   --danger: #FF7A9C;
   --danger-soft: rgba(255,122,156,0.14);
+  --editor-bg: #0B0716;
+  --editor-text: #F3EFFA;
 }
 :root[data-theme="aurora"] .theme-icon-dark,
 :root[data-theme="aurora"] .theme-icon-light { display: none; }
@@ -326,10 +336,10 @@ code, pre { font-family: var(--font-mono); }
 
 #codeEditor {
   width: 100%; min-height: 220px; resize: vertical; border: none; outline: none;
-  background: #0D0F16; color: var(--text); font-family: var(--font-mono); font-size: 0.88rem;
+  background: var(--editor-bg); color: var(--editor-text); font-family: var(--font-mono); font-size: 0.88rem;
   padding: 16px; line-height: 1.55; tab-size: 2;
 }
-.output-panel { border-top: 1px solid var(--border); background: #0D0F16; }
+.output-panel { border-top: 1px solid var(--border); background: var(--editor-bg); }
 .output-header { padding: 8px 14px; font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
 #output { margin: 0; padding: 14px; font-family: var(--font-mono); font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; min-height: 60px; max-height: 320px; overflow-y: auto; }
 #output.err { color: var(--danger); }
@@ -371,7 +381,7 @@ code, pre { font-family: var(--font-mono); }
 .slide-bullets { padding-left: 20px; margin: 0; }
 .slide-bullets li { margin: 10px 0; color: var(--text); opacity: 0.94; line-height: 1.55; }
 .slide-code {
-  background: #0D0F16; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--editor-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
   padding: 16px; margin-top: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.6;
 }
 .slide-code code { color: var(--text); }

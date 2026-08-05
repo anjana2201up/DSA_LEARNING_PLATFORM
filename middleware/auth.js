@@ -43,12 +43,12 @@ router.post("/register", async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters long." });
     }
-    const existingUser = store.findByEmail(email);
+    const existingUser = await store.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: "Email already registered." });
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = store.createUser({ name, email, passwordHash });
+    const user = await store.createUser({ name, email, passwordHash });
     const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
     res.status(201).json({ token, user: store.publicUser(user) });
   } catch (err) {
@@ -62,7 +62,7 @@ router.post("/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
-    const user = store.findByEmail(email);
+    const user = await store.findByEmail(email);
     if (!user || !user.passwordHash) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
@@ -97,13 +97,13 @@ router.post("/google", async (req, res) => {
     const email = payload.email;
     const name = payload.name;
 
-    let user = store.findByGoogleId(googleId);
+    let user = await store.findByGoogleId(googleId);
     if (!user) {
-      user = store.findByEmail(email);
+      user = await store.findByEmail(email);
       if (user) {
-        user = store.updateUser(user.id, { googleId });
+        user = await store.updateUser(user.id, { googleId });
       } else {
-        user = store.createUser({ name, email, googleId });
+        user = await store.createUser({ name, email, googleId });
       }
     }
     const token = jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });

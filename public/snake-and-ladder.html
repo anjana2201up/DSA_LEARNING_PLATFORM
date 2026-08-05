@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Snake and Ladder</title>
+<meta name="description" content="Race to 100 in Snake and Ladder." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+  .game-container { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; z-index: 10; max-width: 800px; margin: 0 auto; width: 100%; }
+  .game-header { text-align: center; margin-bottom: 20px; }
+  .game-header h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0; }
+  .game-header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 8px; }
+  
+  .game-layout {
+    display: flex;
+    gap: 30px;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(10, 40px);
+    grid-template-rows: repeat(10, 40px);
+    background: var(--surface-3);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .cell {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-2);
+  }
+  
+  /* Color coding to make board lively */
+  .cell:nth-child(even) { background: var(--surface); }
+
+  /* Player tokens */
+  .token {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transition: all 0.5s ease-in-out;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    z-index: 5;
+  }
+  .token.player { background: var(--accent-2); z-index: 6; }
+  .token.ai { background: var(--danger); z-index: 5; }
+
+  /* Connections visualizer (SVG overlay) */
+  .svg-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 400px;
+    height: 400px;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .dashboard {
+    background: var(--surface);
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    min-width: 250px;
+    text-align: center;
+  }
+  .status-box { margin-bottom: 20px; }
+  .status-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+  .status-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-top: 5px; }
+  
+  .dice-container {
+    width: 80px;
+    height: 80px;
+    background: var(--surface-2);
+    border: 2px solid var(--border-strong);
+    border-radius: 12px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--text);
+  }
+  .dice-container.roll { animation: wiggle 0.4s; }
+
+  @keyframes wiggle {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    50% { transform: rotate(15deg); }
+    75% { transform: rotate(-15deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .msg-area {
+    min-height: 40px;
+    margin-bottom: 20px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .standalone-nav { position: absolute; top: 20px; left: 20px; z-index: 100; }
+
+  @media (max-width: 500px) {
+    .board {
+      grid-template-columns: repeat(10, 30px);
+      grid-template-rows: repeat(10, 30px);
+      padding: 5px;
+    }
+    .cell { width: 30px; height: 30px; font-size: 0.6rem; }
+    .svg-overlay { width: 300px; height: 300px; top: 5px; left: 5px; }
+    .token { width: 16px; height: 16px; }
+  }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div class="bubble-field"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span></div>
+
+<div class="standalone-nav">
+  <a href="/games" class="btn btn-ghost">← Back to Hub</a>
+</div>
+
+<main class="game-container">
+  <div class="game-header">
+    <h1>Snake & <span class="accent">Ladder</span></h1>
+    <p>The O(1) teleportation game.</p>
+  </div>
+
+  <div class="game-layout">
+    <div class="board" id="board">
+      <svg class="svg-overlay" id="svgLayer"></svg>
+      <!-- Cells generated via JS -->
+      <div class="token player" id="token-player"></div>
+      <div class="token ai" id="token-ai"></div>
+    </div>
+
+    <div class="dashboard">
+      <div class="status-box">
+        <div class="status-label">Turn</div>
+        <div class="status-value" id="turn-display">Your Turn</div>
+      </div>
+      
+      <div class="dice-container" id="dice">🎲</div>
+      
+      <div class="msg-area" id="msg">Roll the dice to start!</div>
+      
+      <button class="btn btn-ghost" id="btn-toggle-mode" style="width: 100%; margin-bottom: 10px; border-color: var(--accent-2); color: var(--accent-2);">1 Player (vs AI)</button>
+      <button class="btn btn-primary" id="btn-roll" style="width: 100%; margin-bottom: 10px;">Roll Dice</button>
+      <button class="btn btn-ghost" id="btn-restart" style="width: 100%;">Restart Game</button>
+    </div>
+  </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const boardEl = document.getElementById('board');
+  const svgLayer = document.getElementById('svgLayer');
+  const tokenPlayer = document.getElementById('token-player');
+  const tokenAi = document.getElementById('token-ai');
+  const diceEl = document.getElementById('dice');
+  const msgEl = document.getElementById('msg');
+  const turnDisplay = document.getElementById('turn-display');
+  const btnRoll = document.getElementById('btn-roll');
+  const btnToggleMode = document.getElementById('btn-toggle-mode');
+  
+  let playerPos = 1;
+  let aiPos = 1;
+  let isPlayerTurn = true;
+  let gameActive = true;
+  let isTwoPlayer = false;
+  
+  const snakes = { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
+  const ladders = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100 };
+  
+  const cellsMap = {}; 
+  
+  function getCellSize() {
+    return window.innerWidth <= 500 ? 30 : 40;
+  }
+  
+  function initBoard() {
+    const cellSize = getCellSize();
+    svgLayer.innerHTML = '';
+    
+    for (let row = 9; row >= 0; row--) {
+      for (let col = 0; col < 10; col++) {
+        let pos = (row % 2 === 0) ? (row * 10) + (10 - col) : (row * 10) + (col + 1);
+        
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = pos;
+        cell.id = `cell-${pos}`;
+        
+        boardEl.insertBefore(cell, tokenPlayer);
+      }
+    }
+
+    for (let row = 9; row >= 0; row--) {
+      for (let col = 0; col < 10; col++) {
+        let pos = (row % 2 === 0) ? (row * 10) + (10 - col) : (row * 10) + (col + 1);
+        let screenRow = 9 - row; 
+        let screenCol = col;
+        
+        cellsMap[pos] = {
+          x: screenCol * cellSize + (cellSize / 2),
+          y: screenRow * cellSize + (cellSize / 2)
+        };
+      }
+    }
+    
+    drawLinks();
+    updateTokens();
+  }
+  
+  function drawLinks() {
+    let svgHtml = '';
+    for (const [start, end] of Object.entries(snakes)) {
+      const p1 = cellsMap[start];
+      const p2 = cellsMap[end];
+      svgHtml += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="var(--danger)" stroke-width="2" stroke-dasharray="4" opacity="0.6" />`;
+    }
+    for (const [start, end] of Object.entries(ladders)) {
+      const p1 = cellsMap[start];
+      const p2 = cellsMap[end];
+      svgHtml += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="var(--success)" stroke-width="3" opacity="0.6" />`;
+    }
+    svgLayer.innerHTML = svgHtml;
+  }
+
+  function updateTokens() {
+    const pCenter = cellsMap[playerPos];
+    const aCenter = cellsMap[aiPos];
+    
+    tokenPlayer.style.left = (pCenter.x - 10 - 4) + 'px';
+    tokenPlayer.style.top = (pCenter.y - 10 - 4) + 'px';
+    
+    tokenAi.style.left = (aCenter.x - 10 + 4) + 'px';
+    tokenAi.style.top = (aCenter.y - 10 + 4) + 'px';
+  }
+
+  function rollDice() {
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
+  function processMove(isPlayer1, diceVal) {
+    let pos = isPlayer1 ? playerPos : aiPos;
+    const name = isTwoPlayer 
+      ? (isPlayer1 ? 'Player 1' : 'Player 2') 
+      : (isPlayer1 ? 'You' : 'AI');
+    
+    if (pos + diceVal <= 100) pos += diceVal;
+    
+    let specialMsg = '';
+    if (snakes[pos]) {
+      pos = snakes[pos];
+      specialMsg = ` Oh no! Bitten by a snake.`;
+    } else if (ladders[pos]) {
+      pos = ladders[pos];
+      specialMsg = ` Yay! Climbed a ladder.`;
+    }
+    
+    if (isPlayer1) playerPos = pos;
+    else aiPos = pos;
+    
+    updateTokens();
+    msgEl.textContent = `${name} rolled ${diceVal}. Moved to ${pos}.${specialMsg}`;
+    
+    if (pos === 100) {
+      gameActive = false;
+      msgEl.textContent = `${name} wins the game! 🎉`;
+      btnRoll.disabled = true;
+      return;
+    }
+    
+    isPlayerTurn = !isPlayerTurn;
+    
+    if (isTwoPlayer) {
+      turnDisplay.textContent = isPlayerTurn ? 'Player 1 Turn' : 'Player 2 Turn';
+      btnRoll.disabled = false;
+    } else {
+      if (isPlayerTurn) {
+        turnDisplay.textContent = 'Your Turn';
+        btnRoll.disabled = false;
+      } else {
+        turnDisplay.textContent = 'AI Turn';
+        setTimeout(aiTurn, 1000);
+      }
+    }
+  }
+
+  function aiTurn() {
+    if (!gameActive || isTwoPlayer) return;
+    const val = rollDice();
+    diceEl.textContent = val;
+    diceEl.classList.add('roll');
+    setTimeout(() => diceEl.classList.remove('roll'), 400);
+    setTimeout(() => processMove(false, val), 500);
+  }
+
+  btnRoll.addEventListener('click', () => {
+    if (!gameActive) return;
+    if (!isTwoPlayer && !isPlayerTurn) return; // Prevent clicking during AI turn
+    
+    btnRoll.disabled = true;
+    const val = rollDice();
+    diceEl.textContent = val;
+    diceEl.classList.add('roll');
+    setTimeout(() => diceEl.classList.remove('roll'), 400);
+    
+    setTimeout(() => {
+      processMove(isPlayerTurn, val);
+    }, 500);
+  });
+
+  function restartGame() {
+    playerPos = 1;
+    aiPos = 1;
+    isPlayerTurn = true;
+    gameActive = true;
+    btnRoll.disabled = false;
+    diceEl.textContent = '🎲';
+    msgEl.textContent = 'Roll the dice to start!';
+    turnDisplay.textContent = isTwoPlayer ? 'Player 1 Turn' : 'Your Turn';
+    updateTokens();
+  }
+
+  document.getElementById('btn-restart').addEventListener('click', restartGame);
+
+  btnToggleMode.addEventListener('click', () => {
+    isTwoPlayer = !isTwoPlayer;
+    btnToggleMode.textContent = isTwoPlayer ? '2 Players (Local)' : '1 Player (vs AI)';
+    restartGame();
+  });
+
+  window.addEventListener('resize', () => {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(c => c.remove());
+    initBoard();
+  });
+
+  initBoard();
+});
+</script>
+</body>
+</html>

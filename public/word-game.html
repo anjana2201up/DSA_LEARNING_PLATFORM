@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Word Search Puzzle</title>
+<meta name="description" content="Find the hidden DSA terms." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+  .game-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; z-index: 10; max-width: 800px; margin: 0 auto; width: 100%; }
+  .game-header { text-align: center; margin-bottom: 30px; }
+  .game-header h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0; }
+  .game-header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 8px; max-width: 500px; }
+  
+  .search-board {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    gap: 2px;
+    background: var(--border-strong);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 450px;
+    aspect-ratio: 1;
+    margin-bottom: 30px;
+    user-select: none;
+  }
+  
+  .cell {
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+  
+  .cell:hover { background: var(--surface-3); }
+  
+  .cell.selected { background: var(--accent); color: #1A1305; transform: scale(1.1); z-index: 2; box-shadow: 0 0 10px var(--accent); }
+  .cell.found { background: var(--success); color: #1A1305; font-weight: 800; }
+  .cell.revealed { background: var(--danger); color: #fff; }
+  
+  .controls { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: center; margin-bottom: 20px; }
+  
+  .standalone-nav { position: absolute; top: 20px; left: 20px; z-index: 100; }
+  
+  .game-message { margin-top: 10px; font-family: var(--font-display); font-size: 1.2rem; min-height: 30px; color: var(--accent); text-align: center; font-weight: 600; }
+  
+  .word-bank {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 500px;
+  }
+  .word-badge {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+    transition: all 0.3s;
+  }
+  .word-badge.found {
+    background: var(--success-soft);
+    color: var(--success);
+    border-color: var(--success);
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+  .word-badge.revealed {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+
+  /* Shake animation for wrong selection */
+  @keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
+  .shake { animation: shake 0.4s; }
+
+  @media (max-width: 500px) {
+    .cell { font-size: 1.2rem; }
+  }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div class="bubble-field"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span></div>
+
+<div class="standalone-nav">
+  <a href="/games" class="btn btn-ghost">← Back to Hub</a>
+</div>
+
+<main class="game-container">
+  <div class="game-header">
+    <h1>Word Search <span class="accent">Puzzle</span></h1>
+    <p>Click the first and last letter to select a word.</p>
+  </div>
+
+  <div class="search-board" id="board">
+    <!-- Generated via JS -->
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="btn-restart">New Game</button>
+    <button class="btn btn-ghost" id="btn-reveal">Reveal Solution</button>
+  </div>
+  
+  <div class="game-message" id="message"></div>
+  
+  <div class="word-bank" id="word-bank">
+    <!-- Words to find generated here -->
+  </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const boardEl = document.getElementById('board');
+  const btnRestart = document.getElementById('btn-restart');
+  const btnReveal = document.getElementById('btn-reveal');
+  const msgEl = document.getElementById('message');
+  const wordBankEl = document.getElementById('word-bank');
+  
+  const SIZE = 10;
+  let cells = [];
+  let grid = [];
+  let hiddenWordsData = []; // Array of { word: string, path: [idx1, idx2, ...] }
+  let foundWords = new Set();
+  let selectionStart = null;
+  let gameActive = true;
+  
+  const DSA_WORDS = ["ARRAY", "GRAPH", "QUEUE", "STACK", "TREES", "LOGIC", "BYTES", "CODED", "NODES", "INDEX", "LOOPS", "PROXY", "SCOPE", "DEBUG", "FLOAT", "CLASS", "MACRO", "SHELL", "LINUX", "ASYNC", "AWAIT", "YIELD", "PARSE", "TOKEN", "REGEX", "QUERY"];
+  
+  const DIRS = [
+    [0, 1], [1, 0], [1, 1], [-1, 1],
+    [0, -1], [-1, 0], [1, -1], [-1, -1]
+  ];
+
+  function renderWordBank() {
+    wordBankEl.innerHTML = '';
+    hiddenWordsData.forEach(item => {
+      const badge = document.createElement('span');
+      badge.className = 'word-badge';
+      badge.id = `badge-${item.word}`;
+      badge.textContent = item.word;
+      wordBankEl.appendChild(badge);
+    });
+  }
+
+  function placeWordInGrid(word) {
+    const letters = word.split('');
+    let placed = false;
+    let attempts = 0;
+    
+    while (!placed && attempts < 100) {
+      attempts++;
+      const dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+      const r = Math.floor(Math.random() * SIZE);
+      const c = Math.floor(Math.random() * SIZE);
+      
+      let endR = r + dir[0] * (letters.length - 1);
+      let endC = c + dir[1] * (letters.length - 1);
+      
+      if (endR >= 0 && endR < SIZE && endC >= 0 && endC < SIZE) {
+        let fits = true;
+        for (let i = 0; i < letters.length; i++) {
+          let checkR = r + dir[0] * i;
+          let checkC = c + dir[1] * i;
+          if (grid[checkR][checkC] !== ' ' && grid[checkR][checkC] !== letters[i]) {
+            fits = false;
+            break;
+          }
+        }
+        
+        if (fits) {
+          let path = [];
+          for (let i = 0; i < letters.length; i++) {
+            let pr = r + dir[0] * i;
+            let pc = c + dir[1] * i;
+            grid[pr][pc] = letters[i];
+            path.push(pr * SIZE + pc);
+          }
+          hiddenWordsData.push({ word, path });
+          placed = true;
+        }
+      }
+    }
+    return placed;
+  }
+
+  function getPathBetween(idx1, idx2) {
+    const r1 = Math.floor(idx1 / SIZE);
+    const c1 = idx1 % SIZE;
+    const r2 = Math.floor(idx2 / SIZE);
+    const c2 = idx2 % SIZE;
+    
+    const dr = r2 - r1;
+    const dc = c2 - c1;
+    
+    // Check if it's a straight line (horizontal, vertical, or perfectly diagonal)
+    if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) {
+      return null; // Not a valid straight line
+    }
+    
+    const steps = Math.max(Math.abs(dr), Math.abs(dc));
+    const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+    const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+    
+    let path = [];
+    for (let i = 0; i <= steps; i++) {
+      let pr = r1 + stepR * i;
+      let pc = c1 + stepC * i;
+      path.push(pr * SIZE + pc);
+    }
+    return path;
+  }
+
+  function handleCellClick(idx) {
+    if (!gameActive) return;
+    
+    // If nothing selected, set start
+    if (selectionStart === null) {
+      selectionStart = idx;
+      cells[idx].classList.add('selected');
+      msgEl.textContent = 'Now click the last letter...';
+      msgEl.style.color = 'var(--text-muted)';
+      return;
+    }
+    
+    // If clicking the same cell, deselect
+    if (selectionStart === idx) {
+      cells[idx].classList.remove('selected');
+      selectionStart = null;
+      msgEl.textContent = '';
+      return;
+    }
+    
+    // We have a start and an end
+    const path = getPathBetween(selectionStart, idx);
+    const startCell = cells[selectionStart];
+    const endCell = cells[idx];
+    startCell.classList.remove('selected');
+    selectionStart = null;
+    
+    if (!path) {
+      shakeBoard();
+      msgEl.textContent = 'Must be a straight line!';
+      msgEl.style.color = 'var(--danger)';
+      return;
+    }
+    
+    const selectedString = path.map(i => cells[i].textContent).join('');
+    const reversedString = selectedString.split('').reverse().join('');
+    
+    // Check if matches a word
+    const matchedItem = hiddenWordsData.find(item => 
+      !foundWords.has(item.word) && 
+      (item.word === selectedString || item.word === reversedString)
+    );
+    
+    if (matchedItem) {
+      // Success!
+      matchedItem.path.forEach(i => cells[i].classList.add('found'));
+      foundWords.add(matchedItem.word);
+      document.getElementById(`badge-${matchedItem.word}`).classList.add('found');
+      
+      msgEl.textContent = `Found ${matchedItem.word}!`;
+      msgEl.style.color = 'var(--success)';
+      
+      // Check win
+      if (foundWords.size === hiddenWordsData.length) {
+        msgEl.textContent = '🎉 Challenge Complete! 🎉';
+        gameActive = false;
+        btnReveal.style.display = 'none';
+      }
+    } else {
+      // Wrong selection
+      shakeBoard();
+      msgEl.textContent = 'Not a valid word.';
+      msgEl.style.color = 'var(--danger)';
+    }
+  }
+  
+  function shakeBoard() {
+    boardEl.classList.remove('shake');
+    void boardEl.offsetWidth; // trigger reflow
+    boardEl.classList.add('shake');
+  }
+
+  function initGame() {
+    boardEl.innerHTML = '';
+    cells = [];
+    grid = Array(SIZE).fill(null).map(() => Array(SIZE).fill(' '));
+    hiddenWordsData = [];
+    foundWords = new Set();
+    selectionStart = null;
+    gameActive = true;
+    btnReveal.style.display = 'inline-block';
+    
+    let numWords = Math.floor(Math.random() * 3) + 5; // 5 to 7 words
+    let shuffled = [...DSA_WORDS].sort(() => 0.5 - Math.random());
+    
+    for (let i = 0; i < numWords; i++) {
+      placeWordInGrid(shuffled[i]);
+    }
+    
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (let i = 0; i < SIZE * SIZE; i++) {
+      let r = Math.floor(i / SIZE);
+      let c = i % SIZE;
+      if (grid[r][c] === ' ') {
+        grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+      
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = grid[r][c];
+      cell.dataset.index = i;
+      
+      cell.addEventListener('click', () => handleCellClick(i));
+      
+      boardEl.appendChild(cell);
+      cells.push(cell);
+    }
+    
+    renderWordBank();
+    msgEl.textContent = 'Find all the words!';
+    msgEl.style.color = 'var(--accent)';
+  }
+
+  btnRestart.addEventListener('click', initGame);
+
+  btnReveal.addEventListener('click', () => {
+    gameActive = false;
+    hiddenWordsData.forEach(item => {
+      if (!foundWords.has(item.word)) {
+        item.path.forEach(i => cells[i].classList.add('revealed'));
+        const badge = document.getElementById(`badge-${item.word}`);
+        if (badge) badge.classList.add('revealed');
+      }
+    });
+    msgEl.textContent = 'Game Over. Better luck next time!';
+    msgEl.style.color = 'var(--danger)';
+    btnReveal.style.display = 'none';
+  });
+
+  initGame();
+});
+</script>
+</body>
+</html>

@@ -154,7 +154,7 @@ const Terminal = (() => {
           <textarea id="fEditor" spellcheck="false">${defaultSnippet(currentLang)}</textarea>
           <div class="output-panel">
             <div class="output-header">stdin (optional)</div>
-            <textarea id="fStdin" style="width:100%; min-height:60px; background:#0D0F16; color:var(--text); font-family:var(--font-mono); font-size:0.82rem; border:none; padding:10px; outline:none;" placeholder="Input piped to your program's stdin, if it reads any"></textarea>
+            <textarea id="fStdin" style="width:100%; min-height:60px; background:var(--editor-bg); color:var(--editor-text); font-family:var(--font-mono); font-size:0.82rem; border:none; padding:10px; outline:none;" placeholder="Input piped to your program's stdin, if it reads any"></textarea>
             <div class="output-header">Output</div>
             <pre id="fOutput" class="empty">Run your code to see output here.</pre>
             <div class="exec-meta" id="fMeta"></div>

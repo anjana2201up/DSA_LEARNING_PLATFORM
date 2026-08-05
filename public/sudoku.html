@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Nexus — Sudoku Solver</title>
+<meta name="description" content="A backtracking algorithm visualizer for Sudoku." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+  .game-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; z-index: 10; max-width: 800px; margin: 0 auto; width: 100%; }
+  .game-header { text-align: center; margin-bottom: 30px; }
+  .game-header h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0; }
+  .game-header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 8px; max-width: 500px; }
+  
+  .sudoku-board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 1px;
+    background: var(--border-strong);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 450px;
+    aspect-ratio: 1;
+    margin-bottom: 30px;
+  }
+  .cell {
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+  }
+  .cell input:focus {
+    background: var(--surface-3);
+  }
+  .cell input.solved {
+    color: var(--accent-2);
+  }
+  .cell input.error {
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+  
+  /* Thick borders for 3x3 blocks */
+  .cell:nth-child(3n) { border-right: 2px solid var(--border-strong); }
+  .cell:nth-child(9n) { border-right: none; }
+  .cell:nth-child(n+19):nth-child(-n+27),
+  .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--border-strong); }
+
+  .controls { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .standalone-nav { position: absolute; top: 20px; left: 20px; z-index: 100; }
+  
+  .game-message { margin-top: 20px; font-family: var(--font-display); font-size: 1.2rem; min-height: 30px; color: var(--accent); }
+
+  @media (max-width: 500px) {
+    .cell input { font-size: 1.2rem; }
+  }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem("dsa-nexus:theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div class="bubble-field"><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span></div>
+
+<div class="standalone-nav">
+  <a href="/games" class="btn btn-ghost">← Back to Hub</a>
+</div>
+
+<main class="game-container">
+  <div class="game-header">
+    <h1>Sudoku <span class="accent">Solver</span></h1>
+    <p>Input your puzzle and watch the backtracking algorithm solve it instantly.</p>
+  </div>
+
+  <div class="sudoku-board" id="board">
+    <!-- Generated via JS -->
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="btn-solve">Solve Puzzle</button>
+    <button class="btn btn-ghost" id="btn-clear">Clear Board</button>
+    <button class="btn btn-ghost" id="btn-sample">Load Sample</button>
+  </div>
+  
+  <div class="game-message" id="message"></div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const boardEl = document.getElementById('board');
+  const msgEl = document.getElementById('message');
+  
+  // Generate 81 cells
+  for (let i = 0; i < 81; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 1;
+    input.dataset.index = i;
+    input.addEventListener('input', (e) => {
+      // Allow only numbers 1-9
+      if (!/^[1-9]$/.test(e.target.value)) {
+        e.target.value = '';
+      }
+      e.target.classList.remove('solved', 'error');
+      msgEl.textContent = '';
+    });
+    cell.appendChild(input);
+    boardEl.appendChild(cell);
+  }
+
+  const inputs = document.querySelectorAll('.cell input');
+
+  function getBoard() {
+    const grid = [];
+    for (let i = 0; i < 9; i++) {
+      grid.push([]);
+      for (let j = 0; j < 9; j++) {
+        const val = inputs[i * 9 + j].value;
+        grid[i].push(val === '' ? 0 : parseInt(val));
+      }
+    }
+    return grid;
+  }
+
+  function setBoard(grid, markAsSolved = false) {
+    for (let i = 0; i < 9; i++) {
+      for (let j = 0; j < 9; j++) {
+        const idx = i * 9 + j;
+        const val = grid[i][j];
+        if (val !== 0) {
+          if (inputs[idx].value === '' && markAsSolved) {
+            inputs[idx].classList.add('solved');
+          }
+          inputs[idx].value = val;
+        } else {
+          inputs[idx].value = '';
+          inputs[idx].classList.remove('solved', 'error');
+        }
+      }
+    }
+  }
+
+  function isValid(grid, r, c, k) {
+    for (let i = 0; i < 9; i++) {
+      if (grid[r][i] === k) return false;
+      if (grid[i][c] === k) return false;
+      if (grid[3 * Math.floor(r / 3) + Math.floor(i / 3)][3 * Math.floor(c / 3) + i % 3] === k) return false;
+    }
+    return true;
+  }
+
+  function solve(grid) {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (grid[r][c] === 0) {
+          for (let k = 1; k <= 9; k++) {
+            if (isValid(grid, r, c, k)) {
+              grid[r][c] = k;
+              if (solve(grid)) return true;
+              grid[r][c] = 0; // backtrack
+            }
+          }
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  
+  function checkInitialValidity(grid) {
+    // Check for obvious conflicts before solving
+    for(let r=0; r<9; r++){
+      for(let c=0; c<9; c++){
+        let val = grid[r][c];
+        if(val !== 0){
+          grid[r][c] = 0;
+          if(!isValid(grid, r, c, val)){
+            grid[r][c] = val;
+            inputs[r*9 + c].classList.add('error');
+            return false;
+          }
+          grid[r][c] = val;
+        }
+      }
+    }
+    return true;
+  }
+
+  document.getElementById('btn-solve').addEventListener('click', () => {
+    inputs.forEach(i => i.classList.remove('error'));
+    const grid = getBoard();
+    if (!checkInitialValidity(grid)) {
+      msgEl.textContent = 'Invalid puzzle! Check highlighted cells.';
+      return;
+    }
+    
+    if (solve(grid)) {
+      setBoard(grid, true);
+      msgEl.textContent = 'Solved successfully in O(9^(n*n)) time!';
+    } else {
+      msgEl.textContent = 'No solution exists for this puzzle.';
+    }
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    inputs.forEach(input => {
+      input.value = '';
+      input.classList.remove('solved', 'error');
+    });
+    msgEl.textContent = '';
+  });
+
+  document.getElementById('btn-sample').addEventListener('click', () => {
+    const sample = [
+      [5,3,0,0,7,0,0,0,0],
+      [6,0,0,1,9,5,0,0,0],
+      [0,9,8,0,0,0,0,6,0],
+      [8,0,0,0,6,0,0,0,3],
+      [4,0,0,8,0,3,0,0,1],
+      [7,0,0,0,2,0,0,0,6],
+      [0,6,0,0,0,0,2,8,0],
+      [0,0,0,4,1,9,0,0,5],
+      [0,0,0,0,8,0,0,7,9]
+    ];
+    inputs.forEach(input => input.classList.remove('solved', 'error'));
+    setBoard(sample);
+    msgEl.textContent = 'Loaded sample puzzle.';
+  });
+});
+</script>
+</body>
+</html>

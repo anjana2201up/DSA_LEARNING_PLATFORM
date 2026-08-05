@@ -41,7 +41,7 @@ router.post("/:id/run", async (req, res) => {
 });
 
 // Submit: only JavaScript is auto-graded against hidden test cases (see data/problems.js for why).
-router.post("/:id/submit", optionalAuth, (req, res) => {
+router.post("/:id/submit", optionalAuth, async (req, res) => {
   const problem = ALL_PROBLEMS.find(p => p.id === req.params.id);
   if (!problem) return res.status(404).json({ error: "Problem not found." });
   const { language = "javascript", code = "" } = req.body || {};
@@ -57,11 +57,11 @@ router.post("/:id/submit", optionalAuth, (req, res) => {
   let saveWarning = null;
   if (req.user) {
     try {
-      store.recordSubmission(req.user.sub, {
+      await store.recordSubmission(req.user.sub, {
         problemId: problem.id, title: problem.title, difficulty: problem.difficulty,
         language, pass: passed
       });
-      if (passed) store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
+      if (passed) await store.updateProgress(req.user.sub, { solvedProblemId: problem.id });
     } catch (err) {
       // Grading itself succeeded - don't fail the whole request just because
       // saving the result to the account didn't work (e.g. ephemeral storage
