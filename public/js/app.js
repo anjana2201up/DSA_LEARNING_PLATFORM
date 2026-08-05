@@ -592,6 +592,8 @@ async function renderDashboard() {
     <div id="editProfilePanel" class="lc-edit-panel" style="display:none;">
       <label class="lc-edit-label">Display name</label>
       <input id="editNameInput" type="text" value="${user.name}" class="lc-edit-input" />
+      <label class="lc-edit-label">Email</label>
+      <input id="editEmailInput" type="email" value="${user.email}" class="lc-edit-input" />
       <label class="lc-edit-label">Avatar</label>
       <div class="avatar-picker">
         ${AVATAR_CHOICES.map(a => `<span class="avatar-option ${a === user.avatar ? "selected" : ""}" data-avatar="${a}">${a}</span>`).join("")}
@@ -802,8 +804,9 @@ async function renderDashboard() {
   });
   document.getElementById("saveProfileBtn").addEventListener("click", async () => {
     const name = document.getElementById("editNameInput").value.trim();
+    const email = document.getElementById("editEmailInput").value.trim();
     try {
-      await Auth.updateProfile({ name, avatar: selectedAvatar });
+      await Auth.updateProfile({ name, email, avatar: selectedAvatar });
       showToast("Profile updated successfully!", "success");
       renderDashboard(); wireAuthArea();
     } catch (err) {

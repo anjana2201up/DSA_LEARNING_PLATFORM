@@ -17,10 +17,17 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.put("/", requireAuth, async (req, res) => {
   try {
-    const { name, avatar } = req.body || {};
+    const { name, avatar, email } = req.body || {};
     const patch = {};
     if (typeof name === "string" && name.trim()) patch.name = name.trim().slice(0, 60);
     if (typeof avatar === "string") patch.avatar = avatar.slice(0, 8);
+    if (typeof email === "string" && email.trim()) {
+      const existing = await store.findByEmail(email.trim());
+      if (existing && existing.id !== req.user.sub) {
+        return res.status(400).json({ error: "Email already in use." });
+      }
+      patch.email = email.trim();
+    }
     const user = await store.updateUser(req.user.sub, patch);
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json({ user: store.publicUser(user) });
