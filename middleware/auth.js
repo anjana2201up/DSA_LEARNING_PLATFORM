@@ -5,22 +5,49 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
 const store = require("../lib/userStore");
 
 const router = express.Router();
 
-// Falls back to a generated-at-boot secret if JWT_SECRET isn't set, so the
-// app never silently 500s on every auth call — but this fallback does NOT
-// survive a restart (every deploy/cold-start invalidates existing tokens),
-// so set a real JWT_SECRET in your environment for production.
+// Falls back to a generated secret if JWT_SECRET isn't set, so the app never
+// silently 500s on every auth call. In serverless environments (Vercel,
+// Lambda) a fresh instance/cold-start regenerates this on every request,
+// which invalidates every existing token almost immediately — this is the
+// #1 cause of "I just signed in but the dashboard shows nothing." For local
+// dev, we persist the generated secret to a gitignored file so restarting
+// the server (e.g. nodemon) doesn't log everyone out. Either way, set a
+// real JWT_SECRET in your environment for anything beyond local dev.
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NOW_REGION);
+const DEV_SECRET_FILE = path.join(__dirname, "..", ".jwt-secret.local");
+
+function loadOrCreateDevSecret() {
+  if (!IS_SERVERLESS) {
+    try {
+      if (fs.existsSync(DEV_SECRET_FILE)) {
+        const existing = fs.readFileSync(DEV_SECRET_FILE, "utf8").trim();
+        if (existing) return existing;
+      }
+    } catch { /* fall through to generating a fresh one */ }
+  }
+  const generated = crypto.randomBytes(48).toString("hex");
+  if (!IS_SERVERLESS) {
+    try { fs.writeFileSync(DEV_SECRET_FILE, generated); } catch { /* best-effort */ }
+  }
+  return generated;
+}
+
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  JWT_SECRET = require("crypto").randomBytes(48).toString("hex");
+  JWT_SECRET = loadOrCreateDevSecret();
   console.warn(
-    "[auth] JWT_SECRET is not set in the environment — using a random secret generated at boot.\n" +
-    "  Existing sessions will be invalidated on every restart/deploy. Set JWT_SECRET in your\n" +
-    "  environment (.env locally, or your host's dashboard in production) to fix this."
+    "[auth] JWT_SECRET is not set in the environment — using a generated secret" +
+    (IS_SERVERLESS
+      ? " (serverless: a NEW one will be generated on every cold start, invalidating all existing sessions — set JWT_SECRET in your host's environment variables to fix this)."
+      : ` persisted to ${path.basename(DEV_SECRET_FILE)} so local restarts won't log everyone out. Set a real JWT_SECRET in .env before deploying.`)
   );
 }
 

@@ -531,6 +531,8 @@ body {
     <h2 class="form-heading" id="formHeading">Welcome back</h2>
     <p class="form-subheading" id="formSubheading">Sign in to continue your learning journey.</p>
 
+    <div class="auth-notice hidden" id="sessionNotice" style="background:rgba(232,163,61,0.1); border:1px solid rgba(232,163,61,0.3); color:var(--primary); padding:10px 14px; border-radius:8px; font-size:0.85rem; margin-bottom:16px;"></div>
+
     <div id="googleSignInHost" class="google-signin-host"></div>
     <div class="auth-divider"><span>or continue with email</span></div>
 
@@ -553,6 +555,13 @@ body {
           <div class="pw-strength-bar"><div class="pw-strength-fill"></div></div>
           <span class="pw-strength-text" id="pwStrengthText"></span>
         </div>
+      </div>
+      <div class="form-row-inline" id="rememberRow" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-muted); cursor:pointer; font-weight:500;">
+          <input id="rememberMe" type="checkbox" checked style="width:15px; height:15px; accent-color:var(--primary); cursor:pointer;" />
+          Remember me on this device
+        </label>
+        <button type="button" id="forgotPasswordBtn" style="background:none; border:none; color:var(--text-faint); font-size:0.8rem; cursor:pointer; text-decoration:underline; padding:0;">Forgot password?</button>
       </div>
       <div class="auth-error hidden" id="authError"></div>
       <div class="auth-success hidden" id="authSuccess">
@@ -584,8 +593,31 @@ body {
   const pwToggle = document.getElementById("pwToggle");
   const pwStrength = document.getElementById("pwStrength");
   const pwStrengthText = document.getElementById("pwStrengthText");
+  const rememberCheckbox = document.getElementById("rememberMe");
+  const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+  const sessionNotice = document.getElementById("sessionNotice");
 
   let mode = "login";
+
+  // --- Session-expired / signed-out messaging (e.g. redirected here after a token expired) ---
+  (function showSessionNotice() {
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("reason");
+    const messages = {
+      session_expired: "Your session expired — please sign in again.",
+      signed_out: "You've been signed out."
+    };
+    if (reason && messages[reason]) {
+      sessionNotice.textContent = messages[reason];
+      sessionNotice.classList.remove("hidden");
+    }
+  })();
+
+  // --- Forgot password (not backed by a server flow yet — set expectations clearly) ---
+  forgotPasswordBtn.addEventListener("click", () => {
+    errBox.textContent = "Password reset isn't available yet. Please contact support to regain access to your account.";
+    errBox.classList.remove("hidden");
+  });
 
   // --- Show/Hide password toggle ---
   pwToggle.addEventListener("click", () => {
@@ -623,6 +655,7 @@ body {
       mode = tab.dataset.tab;
       document.querySelectorAll(".auth-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === mode));
       nameRow.style.display = mode === "register" ? "flex" : "none";
+      forgotPasswordBtn.style.display = mode === "register" ? "none" : "inline";
       heading.textContent = mode === "register" ? "Create your account" : "Welcome back";
       subheading.textContent = mode === "register"
         ? "Start tracking your DSA learning journey."
@@ -658,10 +691,10 @@ body {
 
     try {
       if (mode === "register") {
-        await Auth.register({ name, email, password });
+        await Auth.register({ name, email, password, remember: rememberCheckbox.checked });
         successText.textContent = "Account created! Redirecting…";
       } else {
-        await Auth.login({ email, password });
+        await Auth.login({ email, password, remember: rememberCheckbox.checked });
         successText.textContent = "Signed in! Redirecting…";
       }
       successBox.classList.remove("hidden");
@@ -704,7 +737,7 @@ body {
             errBox.classList.add("hidden");
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner"></span>Signing in with Google…';
-            await Auth.loginWithGoogleIdToken(response.credential);
+            await Auth.loginWithGoogleIdToken(response.credential, rememberCheckbox.checked);
             successText.textContent = "Google sign-in successful! Redirecting…";
             successBox.classList.remove("hidden");
             setTimeout(() => { window.location.href = "/app#/dashboard"; }, 800);

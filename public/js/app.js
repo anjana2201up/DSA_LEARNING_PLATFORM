@@ -800,7 +800,7 @@ async function renderDashboard() {
   // --- Event Listeners ---
   document.getElementById("signOutBtn").addEventListener("click", () => {
     Auth.signOut();
-    window.location.hash = "#/";
+    window.location.href = "/login.html?reason=signed_out";
   });
   document.getElementById("editProfileBtn").addEventListener("click", () => {
     const panel = document.getElementById("editProfilePanel");
