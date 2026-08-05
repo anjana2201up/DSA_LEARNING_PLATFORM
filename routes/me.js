@@ -17,7 +17,7 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.put("/", requireAuth, async (req, res) => {
   try {
-    const { name, avatar, email } = req.body || {};
+    const { name, avatar, email, github, linkedin, leetcode } = req.body || {};
     const patch = {};
     if (typeof name === "string" && name.trim()) patch.name = name.trim().slice(0, 60);
     if (typeof avatar === "string") patch.avatar = avatar.slice(0, 8);
@@ -28,6 +28,20 @@ router.put("/", requireAuth, async (req, res) => {
       }
       patch.email = email.trim();
     }
+    
+    // Social links
+    if (github !== undefined || linkedin !== undefined || leetcode !== undefined) {
+      // In MongoDB, you could use dot notation like 'socials.github', but since the file fallback replaces the top level,
+      // it's safest to get the user first, or we can assume the whole socials object is replaced or patched.
+      // We will merge it inside userStore update logic if necessary, but here we just create a complete socials object.
+      const user = await store.findById(req.user.sub);
+      const socials = { ...(user.socials || { github: "", linkedin: "", leetcode: "" }) };
+      if (typeof github === "string") socials.github = github.trim().slice(0, 150);
+      if (typeof linkedin === "string") socials.linkedin = linkedin.trim().slice(0, 150);
+      if (typeof leetcode === "string") socials.leetcode = leetcode.trim().slice(0, 150);
+      patch.socials = socials;
+    }
+
     const user = await store.updateUser(req.user.sub, patch);
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json({ user: store.publicUser(user) });

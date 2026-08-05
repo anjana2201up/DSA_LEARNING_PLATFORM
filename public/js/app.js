@@ -574,6 +574,12 @@ async function renderDashboard() {
           </div>
           <div class="lc-meta">${user.email}</div>
           <div class="lc-meta">Member since ${new Date(user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+          ${user.socials && (user.socials.github || user.socials.linkedin || user.socials.leetcode) ? `
+          <div class="lc-socials" style="margin-top:8px; display:flex; gap:12px; font-size:0.9rem;">
+            ${user.socials.github ? `<a href="${escapeHtml(user.socials.github)}" target="_blank" rel="noopener" style="color:var(--text-faint); text-decoration:none;">GitHub ↗</a>` : ''}
+            ${user.socials.linkedin ? `<a href="${escapeHtml(user.socials.linkedin)}" target="_blank" rel="noopener" style="color:var(--text-faint); text-decoration:none;">LinkedIn ↗</a>` : ''}
+            ${user.socials.leetcode ? `<a href="${escapeHtml(user.socials.leetcode)}" target="_blank" rel="noopener" style="color:var(--text-faint); text-decoration:none;">LeetCode ↗</a>` : ''}
+          </div>` : ''}
         </div>
       </div>
       <div class="lc-profile-right">
@@ -594,6 +600,12 @@ async function renderDashboard() {
       <input id="editNameInput" type="text" value="${user.name}" class="lc-edit-input" />
       <label class="lc-edit-label">Email</label>
       <input id="editEmailInput" type="email" value="${user.email}" class="lc-edit-input" />
+      <label class="lc-edit-label">GitHub URL</label>
+      <input id="editGithubInput" type="url" value="${user.socials?.github || ''}" placeholder="https://github.com/yourusername" class="lc-edit-input" />
+      <label class="lc-edit-label">LinkedIn URL</label>
+      <input id="editLinkedinInput" type="url" value="${user.socials?.linkedin || ''}" placeholder="https://linkedin.com/in/yourusername" class="lc-edit-input" />
+      <label class="lc-edit-label">LeetCode URL</label>
+      <input id="editLeetcodeInput" type="url" value="${user.socials?.leetcode || ''}" placeholder="https://leetcode.com/u/yourusername" class="lc-edit-input" />
       <label class="lc-edit-label">Avatar</label>
       <div class="avatar-picker">
         ${AVATAR_CHOICES.map(a => `<span class="avatar-option ${a === user.avatar ? "selected" : ""}" data-avatar="${a}">${a}</span>`).join("")}
@@ -805,8 +817,11 @@ async function renderDashboard() {
   document.getElementById("saveProfileBtn").addEventListener("click", async () => {
     const name = document.getElementById("editNameInput").value.trim();
     const email = document.getElementById("editEmailInput").value.trim();
+    const github = document.getElementById("editGithubInput").value.trim();
+    const linkedin = document.getElementById("editLinkedinInput").value.trim();
+    const leetcode = document.getElementById("editLeetcodeInput").value.trim();
     try {
-      await Auth.updateProfile({ name, email, avatar: selectedAvatar });
+      await Auth.updateProfile({ name, email, github, linkedin, leetcode, avatar: selectedAvatar });
       showToast("Profile updated successfully!", "success");
       renderDashboard(); wireAuthArea();
     } catch (err) {
