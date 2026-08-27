@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Nexus — README</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10141c;
+    --ink-2:#161b26;
+    --ink-3:#1d2330;
+    --line:#2a3242;
+    --line-soft:#232939;
+    --text:#e7e4da;
+    --text-dim:#8b93a5;
+    --text-faint:#5b6478;
+    --amber:#e8a33d;
+    --amber-dim:#b3812f;
+    --teal:#5fd9b4;
+    --teal-dim:#3ea187;
+    --coral:#e8735a;
+    --coral-dim:#b6573f;
+    --lilac:#a9a4e8;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    line-height:1.7;
+  }
+  code, .mono{ font-family:'JetBrains Mono',monospace; }
+
+  /* ---------- title bar ---------- */
+  .titlebar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 16px;
+    background:var(--ink-2);
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.red{ background:#e8735a; }
+  .dot.yellow{ background:#e8a33d; }
+  .dot.green{ background:#5fd9b4; }
+  .tabs{ display:flex; gap:2px; margin-left:16px; overflow-x:auto; }
+  .tab{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    padding:6px 14px;
+    color:var(--text-faint);
+    border-right:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .tab.active{ color:var(--amber); background:var(--ink); border-bottom:2px solid var(--amber); }
+
+  /* ---------- layout ---------- */
+  .shell{ display:flex; max-width:1180px; margin:0 auto; }
+  .sidebar{
+    width:230px;
+    flex-shrink:0;
+    padding:24px 12px;
+    border-right:1px solid var(--line-soft);
+    position:sticky;
+    top:45px;
+    height:calc(100vh - 45px);
+    overflow-y:auto;
+  }
+  .sidebar-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    padding:0 10px 8px;
+  }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 10px;
+    border-radius:4px;
+    font-size:13.5px;
+    color:var(--text-dim);
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .nav-item:hover{ background:var(--ink-3); color:var(--text); }
+  .nav-item .sq{ width:6px; height:6px; border-radius:1px; flex-shrink:0; }
+
+  .content{ flex:1; min-width:0; padding:48px 40px 100px; }
+  @media (max-width:820px){
+    .sidebar{ display:none; }
+    .content{ padding:32px 20px 80px; }
+  }
+
+  section{ margin-bottom:64px; scroll-margin-top:60px; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:44px;
+    line-height:1.15;
+    margin:0 0 14px;
+    color:var(--text);
+  }
+  h1 span{ color:var(--teal); }
+  h2{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:500;
+    font-size:22px;
+    margin:0 0 18px;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  h2::before{ content:'#'; color:var(--text-faint); font-weight:400; }
+  p{ color:var(--text-dim); margin:0 0 14px; max-width:680px; }
+  .lede{ font-size:17px; color:var(--text); max-width:640px; }
+  a{ color:var(--teal); }
+
+  /* ---------- hero ---------- */
+  .hero-meta{
+    display:flex; gap:18px; flex-wrap:wrap; margin-top:18px;
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-faint);
+  }
+  .hero-meta b{ color:var(--text-dim); font-weight:500; }
+
+  /* ---------- feature grid ---------- */
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+  .card{
+    background:var(--ink-2);
+    border:1px solid var(--line-soft);
+    border-left:3px solid var(--accent,var(--amber));
+    border-radius:6px;
+    padding:18px 18px 16px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .card:hover{ background:var(--ink-3); border-color:var(--line); border-left-color:var(--accent,var(--amber)); }
+  .card-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--accent,var(--amber));
+    margin:0 0 8px;
+  }
+  .card-title{ font-weight:600; font-size:15px; color:var(--text); margin:0 0 6px; }
+  .card-body{ font-size:13.5px; color:var(--text-dim); margin:0; max-height:0; overflow:hidden; transition:max-height .2s ease; }
+  .card.open .card-body{ max-height:200px; margin-top:8px; }
+  .card-chevron{ float:right; color:var(--text-faint); transition:transform .15s ease; }
+  .card.open .card-chevron{ transform:rotate(90deg); }
+
+  /* ---------- terminal / code blocks ---------- */
+  .term{
+    background:var(--ink-2);
+    border:1px solid var(--line-soft);
+    border-radius:6px;
+    overflow:hidden;
+    margin:0 0 16px;
+  }
+  .term-bar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 14px; border-bottom:1px solid var(--line-soft);
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-faint);
+  }
+  .copy-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    padding:3px 10px; border-radius:4px; cursor:pointer;
+  }
+  .copy-btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .term pre{ margin:0; padding:16px; font-family:'JetBrains Mono',monospace; font-size:13.5px; color:var(--teal); overflow-x:auto; }
+  .term pre .c1{ color:var(--text-faint); }
+
+  /* ---------- file tree ---------- */
+  .tree{ font-family:'JetBrains Mono',monospace; font-size:13.5px; border:1px solid var(--line-soft); border-radius:6px; padding:14px 16px; background:var(--ink-2); }
+  .tree-row{ display:flex; align-items:center; gap:7px; padding:4px 0; }
+  .tree-row.folder{ cursor:pointer; color:var(--amber); }
+  .tree-row.file{ color:var(--text-dim); }
+  .tree-note{ color:var(--text-faint); font-size:12px; }
+  .chev{ display:inline-block; transition:transform .15s ease; color:var(--text-faint); width:12px; }
+  .chev.open{ transform:rotate(90deg); }
+
+  /* ---------- complexity dial ---------- */
+  .dial-box{ border:1px solid var(--line-soft); border-radius:6px; padding:20px; background:var(--ink-2); }
+  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .pill{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px;
+    padding:6px 13px; border-radius:14px; border:1px solid var(--line);
+    color:var(--text-dim); cursor:pointer; background:transparent;
+  }
+  .pill.active{ background:rgba(232,163,61,0.12); border-color:var(--amber); color:var(--amber); }
+  .slider-row{ display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  .slider-row label{ font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-faint); }
+  input[type=range]{ flex:1; accent-color:var(--teal); }
+  .ops-readout{ font-family:'JetBrains Mono',monospace; font-size:26px; color:var(--text); }
+  .ops-readout small{ font-size:13px; color:var(--text-faint); font-weight:400; }
+  .bar-track{ height:8px; border-radius:4px; background:var(--ink-3); overflow:hidden; margin-top:10px; }
+  .bar-fill{ height:100%; background:var(--teal); width:5%; }
+
+  footer{ border-top:1px solid var(--line-soft); padding:28px 40px; text-align:center; }
+  footer p{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-faint); max-width:none; }
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<h1 class="sr-only">DSA Nexus — interactive project README</h1>
+
+<div class="titlebar">
+  <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+  <div class="tabs">
+    <div class="tab active">README.md</div>
+    <div class="tab">server.js</div>
+    <div class="tab">package.json</div>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-label">Explorer</div>
+    <a class="nav-item" href="#overview"><span class="sq" style="background:var(--amber)"></span>Overview</a>
+    <a class="nav-item" href="#features"><span class="sq" style="background:var(--teal)"></span>Features</a>
+    <a class="nav-item" href="#run"><span class="sq" style="background:var(--coral)"></span>Run it</a>
+    <a class="nav-item" href="#structure"><span class="sq" style="background:var(--lilac)"></span>Project structure</a>
+    <a class="nav-item" href="#scaling"><span class="sq" style="background:var(--amber)"></span>Scaling topics</a>
+    <a class="nav-item" href="#compiler"><span class="sq" style="background:var(--teal)"></span>Compiler + Big-O</a>
+    <a class="nav-item" href="#notes"><span class="sq" style="background:var(--coral)"></span>Notes on images</a>
+  </nav>
+
+  <main class="content">
+
+    <section id="overview">
+      <p class="eyebrow">github.com/anjana2201up/DSA_LEARNING_PLATFORM</p>
+      <h1>DSA <span>Nexus</span></h1>
+      <p class="lede">A learning platform for data structures and algorithms — basic to advanced — built with Node.js, Express, HTML, CSS, and vanilla JavaScript only. No frontend framework, no build step.</p>
+      <div class="hero-meta">
+        <span><b>Stack</b> Node · Express · vanilla JS</span>
+        <span><b>Auth</b> JWT + Google OAuth</span>
+        <span><b>Deploy</b> Vercel</span>
+      </div>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <div class="grid">
+        <div class="card" style="--accent:var(--amber)" tabindex="0">
+          <span class="card-chevron mono">›</span>
+          <p class="card-tag">01 · content</p>
+          <p class="card-title">35 DSA topics</p>
+          <p class="card-body">Foundations through advanced, each with an explanation, a complexity reference table, an original SVG diagram, a "Complexity Dial" gauge, and a runnable reference implementation.</p>
+        </div>
+        <div class="card" style="--accent:var(--teal)" tabindex="0">
+          <span class="card-chevron mono">›</span>
+          <p class="card-tag">02 · interview prep</p>
+          <p class="card-title">12 coding patterns</p>
+          <p class="card-body">Two Pointers, Sliding Window, Fast &amp; Slow Pointers, Merge Intervals, Cyclic Sort, In-place Linked List Reversal, Tree BFS/DFS, Two Heaps, Subsets/Backtracking, Modified Binary Search, Top K Elements — each as a swipeable, keyboard-navigable slide deck.</p>
+        </div>
+        <div class="card" style="--accent:var(--coral)" tabindex="0">
+          <span class="card-chevron mono">›</span>
+          <p class="card-tag">03 · sandbox</p>
+          <p class="card-title">Built-in compiler</p>
+          <p class="card-body">Every topic page has a "Try it Yourself" editor that runs real JavaScript in a sandboxed, timeboxed server-side environment via server.js → /api/compile, using Node's vm module.</p>
+        </div>
+        <div class="card" style="--accent:var(--lilac)" tabindex="0">
+          <span class="card-chevron mono">›</span>
+          <p class="card-tag">04 · layout</p>
+          <p class="card-title">Fully responsive</p>
+          <p class="card-body">Mobile hamburger nav, collapsing sidebar, responsive grids, plus an animated particle/network background that respects prefers-reduced-motion.</p>
+        </div>
+        <div class="card" style="--accent:var(--amber)" tabindex="0">
+          <span class="card-chevron mono">›</span>
+          <p class="card-tag">05 · visuals</p>
+          <p class="card-title">Original inline SVGs</p>
+          <p class="card-body">All diagrams are generated in public/js/diagrams.js — nothing scraped or copied from elsewhere.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="run">
+      <h2>Run it</h2>
+      <div class="term">
+        <div class="term-bar"><span>shell</span><button class="copy-btn" data-copy="npm install&#10;npm start">copy</button></div>
+        <pre><span class="c1">$</span> npm install
+<span class="c1">$</span> npm start</pre>
+      </div>
+      <p>Then open <a href="http://localhost:3000">localhost:3000</a></p>
+    </section>
+
+    <section id="structure">
+      <h2>Project structure</h2>
+      <p style="font-size:13.5px;">Click a folder to expand it.</p>
+      <div class="tree" id="tree"></div>
+    </section>
+
+    <section id="scaling">
+      <h2>Scaling from 35 topics to 100+</h2>
+      <p>Everything reads from <code>data/topics.js</code>. To add a topic: add one object to the <code>TOPICS</code> array — id, category, title, summary, diagram key, complexity, HTML content, optional code sample. The sidebar, routing, complexity dial, and compiler all pick it up automatically. No other file needs to change.</p>
+    </section>
+
+    <section id="compiler">
+      <h2>Compiler sandbox + the complexity dial</h2>
+      <p><code>/api/compile</code> runs submitted code in a fresh V8 context via Node's built-in <code>vm</code> module: no <code>require</code>, <code>process</code>, or filesystem access is exposed, output is captured rather than printed to the real console, there's a 3-second wall-clock timeout, and output is capped in size. This supports JavaScript only — other languages would mean swapping in an external execution API like Judge0 or Piston.</p>
+      <p style="font-size:13.5px; margin-top:22px;">Below is the same idea behind the in-app "Complexity Dial" — pick a growth rate and drag the input size.</p>
+      <div class="dial-box">
+        <div class="pill-row" id="picker"></div>
+        <div class="slider-row">
+          <label>n =</label>
+          <input type="range" min="1" max="100" value="20" step="1" id="n-slider">
+          <span class="mono" id="n-out" style="min-width:32px;color:var(--text)">20</span>
+        </div>
+        <div class="ops-readout"><span id="ops-out">20</span> <small>operations</small></div>
+        <div class="bar-track"><div class="bar-fill" id="ops-bar"></div></div>
+      </div>
+    </section>
+
+    <section id="notes">
+      <h2>A note on "images from Google"</h2>
+      <p>This project does not scrape or embed third-party or Google images — that raises copyright and reliability problems, from broken hotlinks to licensing. Every diagram is instead an original, theme-matched SVG generated in <code>public/js/diagrams.js</code>, so the platform stays fully self-contained and legally clean while still being visual.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer><p>DSA_LEARNING_PLATFORM · anjana2201up · rendered as an interactive README</p></footer>
+
+<script>
+document.querySelectorAll('.card').forEach(function(card){
+  function toggle(){ card.classList.toggle('open'); }
+  card.addEventListener('click', toggle);
+  card.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+});
+
+document.querySelectorAll('.copy-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var text = btn.getAttribute('data-copy').replace(/&#10;/g,'\n');
+    navigator.clipboard.writeText(text).then(function(){
+      var original = btn.textContent;
+      btn.textContent = 'copied';
+      setTimeout(function(){ btn.textContent = original; }, 1200);
+    });
+  });
+});
+
+var treeData = [
+  { name:'server.js', type:'file', note:'Express + /api/compile sandbox' },
+  { name:'data', type:'folder', children:[
+    { name:'topics.js', type:'file', note:'35 DSA topics' },
+    { name:'patterns.js', type:'file', note:'12 pattern slide decks' }
+  ]},
+  { name:'public', type:'folder', children:[
+    { name:'index.html', type:'file' },
+    { name:'css/style.css', type:'file', note:'design tokens + responsive rules' },
+    { name:'js/app.js', type:'file', note:'hash router, search' },
+    { name:'js/compiler.js', type:'file', note:'try it yourself wiring' },
+    { name:'js/slides.js', type:'file', note:'PPT-style pattern viewer' },
+    { name:'js/diagrams.js', type:'file', note:'original SVG generator' },
+    { name:'js/background.js', type:'file', note:'particle network background' }
+  ]}
+];
+
+function renderNode(node, depth){
+  var wrap = document.createElement('div');
+  var row = document.createElement('div');
+  row.className = 'tree-row ' + node.type;
+  row.style.paddingLeft = (depth*16) + 'px';
+
+  var chev = document.createElement('span');
+  chev.className = 'chev';
+  chev.textContent = node.type === 'folder' ? '›' : ' ';
+  row.appendChild(chev);
+
+  var label = document.createElement('span');
+  label.textContent = node.name;
+  row.appendChild(label);
+
+  if(node.note){
+    var note = document.createElement('span');
+    note.className = 'tree-note';
+    note.textContent = ' — ' + node.note;
+    row.appendChild(note);
+  }
+  wrap.appendChild(row);
+
+  if(node.type === 'folder'){
+    var childWrap = document.createElement('div');
+    childWrap.style.display = 'none';
+    node.children.forEach(function(c){ childWrap.appendChild(renderNode(c, depth+1)); });
+    wrap.appendChild(childWrap);
+    var open = false;
+    row.addEventListener('click', function(){
+      open = !open;
+      childWrap.style.display = open ? 'block' : 'none';
+      chev.classList.toggle('open', open);
+    });
+  }
+  return wrap;
+}
+var treeEl = document.getElementById('tree');
+treeData.forEach(function(n){ treeEl.appendChild(renderNode(n,0)); });
+
+var complexities = [
+  { key:'log', label:'O(log n)', fn:function(n){ return Math.max(1, Math.log2(n)); } },
+  { key:'lin', label:'O(n)', fn:function(n){ return n; } },
+  { key:'nlog', label:'O(n log n)', fn:function(n){ return n * Math.max(1, Math.log2(n)); } },
+  { key:'sq', label:'O(n²)', fn:function(n){ return n * n; } }
+];
+var active = complexities[1];
+var picker = document.getElementById('picker');
+function paintPicker(){
+  picker.innerHTML = '';
+  complexities.forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'pill' + (c.key === active.key ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function(){ active = c; paintPicker(); updateOps(); });
+    picker.appendChild(b);
+  });
+}
+var slider = document.getElementById('n-slider');
+var nOut = document.getElementById('n-out');
+var opsOut = document.getElementById('ops-out');
+var opsBar = document.getElementById('ops-bar');
+var maxOps = complexities[3].fn(100);
+function updateOps(){
+  var n = parseInt(slider.value, 10);
+  nOut.textContent = n;
+  var ops = Math.round(active.fn(n));
+  opsOut.textContent = ops.toLocaleString();
+  var pct = Math.min(100, Math.max(3, (ops/maxOps)*100));
+  opsBar.style.width = pct + '%';
+}
+slider.addEventListener('input', updateOps);
+paintPicker();
+updateOps();
+</script>
+
+</body>
+</html>
