@@ -34,7 +34,7 @@ Then open http://localhost:3000
 
 ## Project structure
 
-\`\`\`
+
 dsa-platform/
 ├── server.js              Express server: static files + JSON APIs + compiler sandbox
 ├── package.json
@@ -51,7 +51,7 @@ dsa-platform/
         ├── slides.js        PPT-style slide deck viewer (used by the 12 Patterns)
         ├── diagrams.js      Original SVG diagram generator library
         └── background.js    Animated responsive particle-network background
-\`\`\`
+
 
 ## Scaling from 35 topics to 100+
 Everything reads from `data/topics.js`. To add a topic:
