@@ -15,7 +15,6 @@ const { CATEGORIES, TOPICS, SCALE } = require("./data/topics");
 const { PATTERNS } = require("./data/patterns");
 const { runCode, AVAILABLE } = require("./lib/runner");
 
-const authRoutes = require("./middleware/auth");
 const meRoutes = require("./routes/me");
 const problemsRoutes = require("./routes/problems");
 const runRoutes = require("./routes/run");
@@ -34,14 +33,6 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: "200kb" }));
 
-// Rate-limit auth endpoints to prevent brute-force attacks
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: 30,                     // 30 attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many attempts. Please try again in 15 minutes." }
-});
 
 // index:false — we control "/" and "/app" ourselves below (landing vs SPA)
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
@@ -94,7 +85,6 @@ app.post("/api/compile", async (req, res) => {
 
 // ---------- Auth / dashboard / problems / terminal / feedback ----------
 
-app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/me", meRoutes);
 app.use("/api/problems", problemsRoutes);
 app.use("/api/run", runRoutes);
@@ -108,7 +98,6 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "welcome.html")));
 app.get("/roadmap", (req, res) => res.sendFile(path.join(__dirname, "public", "roadmap.html")));
 app.get(["/app", "/app/*"], (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get(["/login", "/signin", "/register", "/signup"], (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/games", (req, res) => res.sendFile(path.join(__dirname, "public", "games-hub.html")));
 app.get(["/games/tic-tac-toe", "/play/tic-tac-toe"], (req, res) => res.sendFile(path.join(__dirname, "public", "tic-tac-toe.html")));
 app.get("/games/rock-paper-scissors", (req, res) => res.sendFile(path.join(__dirname, "public", "rock-paper-scissors.html")));
@@ -123,7 +112,6 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`DSA Nexus running at http://localhost:${PORT}`);
     console.log(`Languages available for the terminal: ${Object.entries(AVAILABLE).filter(([, v]) => v).map(([k]) => k).join(", ")}`);
-    if (!process.env.GOOGLE_CLIENT_ID) console.log(`Google Sign-In: disabled (set GOOGLE_CLIENT_ID in .env to enable)`);
   });
 }
 

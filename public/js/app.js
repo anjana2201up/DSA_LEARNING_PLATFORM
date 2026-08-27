@@ -62,11 +62,14 @@ async function boot() {
   wireSearch();
   wireMobileNav();
   wireTheme();
-  wireAuthArea();
-  wireAuthModal();
+  wireXpChip();
+  wireScrollProgress();
+  wireScrollToTop();
+  wireCommandPalette();
+  wireDailyTip();
+  window.addEventListener("xp:changed", wireXpChip);
   window.addEventListener("hashchange", routeWithAnimation);
   window.addEventListener("hashchange", () => { updatePrimaryNavActive(); });
-  window.addEventListener("auth:changed", wireAuthArea);
   window.addEventListener("keydown", handleGlobalKeydown);
   route();
   animatePageIn();
@@ -160,18 +163,62 @@ function routeWithAnimation() {
 
 // ---------------- Home ----------------
 
+// localStorage key for last visited topic
+const LAST_TOPIC_KEY = "dsa-nexus:last-topic";
+function getLastTopic() {
+  try { return JSON.parse(localStorage.getItem(LAST_TOPIC_KEY) || "null"); } catch { return null; }
+}
+function setLastTopic(id, title, cat) {
+  try { localStorage.setItem(LAST_TOPIC_KEY, JSON.stringify({ id, title, cat })); } catch {}
+}
+
 function renderHome() {
   const topicCount = state.topics.length;
   const patternCount = state.patterns.length;
+  const completedIds = window.Progress ? [...Progress.completedIds()] : [];
+  const completedSet = new Set(completedIds);
+
+  // Pick up where you left off
+  const lastTopic = getLastTopic();
+  const pickupHtml = lastTopic ? `
+    <a class="pickup-card" href="#/topic/${lastTopic.id}">
+      <div>
+        <div class="pickup-label">📍 Pick up where you left off</div>
+        <div class="pickup-title">${lastTopic.title}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${lastTopic.cat || ''}</div>
+      </div>
+      <span class="pickup-arrow">→</span>
+    </a>` : '';
+
+  // Suggest next unfinished topic
+  const nextTopic = state.topics.find(t => !completedSet.has(t.id));
+  const nextTopicHtml = nextTopic && !lastTopic ? `
+    <div class="next-topic-banner">
+      <span class="next-topic-icon">🚀</span>
+      <div>
+        <div class="next-topic-label">Suggested next</div>
+        <div class="next-topic-name">${nextTopic.title}</div>
+      </div>
+      <a href="#/topic/${nextTopic.id}" class="next-topic-link">Start →</a>
+    </div>` : '';
+
   const catCards = state.categories.map(cat => {
     const count = state.topics.filter(t => t.category === cat.id).length;
+    const done = state.topics.filter(t => t.category === cat.id && completedSet.has(t.id)).length;
     const first = state.topics.find(t => t.category === cat.id);
+    const pct = count > 0 ? Math.round((done / count) * 100) : 0;
     return `
       <a class="cat-card" href="#/topic/${first ? first.id : ''}">
         <span class="cat-level level-${cat.level}">${cat.level}</span>
         <h3>${cat.label}</h3>
-        <p>${count} topic${count !== 1 ? "s" : ""} covered</p>
-        <div class="count">→ start learning</div>
+        <p>${count} topic${count !== 1 ? 's' : ''}</p>
+        <div class="cat-card-footer">
+          <span class="cat-card-progress">${done}/${count} done</span>
+          <div style="width:60px; height:4px; border-radius:3px; background:var(--surface-3); overflow:hidden; display:inline-block;">
+            <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,var(--accent-2),var(--accent)); border-radius:3px;"></div>
+          </div>
+          <span class="cat-card-arrow">→</span>
+        </div>
       </a>`;
   }).join("");
 
@@ -181,6 +228,8 @@ function renderHome() {
       <h3>${p.title}</h3>
       <p>${p.tagline}</p>
     </a>`).join("");
+
+  const overallPct = topicCount > 0 ? Math.round((completedIds.length / topicCount) * 100) : 0;
 
   contentEl.innerHTML = `
     <section class="hero">
@@ -201,6 +250,17 @@ function renderHome() {
       <div class="stat"><b>100%</b><span>Free &amp; open</span></div>
     </div>
 
+    ${pickupHtml}
+    ${nextTopicHtml}
+
+    <div class="progress-overview">
+      <div class="overall-row">
+        <span class="overall-pct">${overallPct}%</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${overallPct}%"></div></div>
+        <span style="font-size:0.8rem; color:var(--text-muted)">${completedIds.length}/${topicCount} topics</span>
+      </div>
+    </div>
+
     <h2 style="font-family:var(--font-display); font-size:1.3rem;">Learning tracks</h2>
     <div class="cat-grid">${catCards}</div>
 
@@ -213,19 +273,29 @@ function renderHome() {
 
 // ---------------- Category listing ----------------
 
+
 function renderCategory(catId) {
   const cat = state.categories.find(c => c.id === catId);
   if (!cat) return renderHome();
   const topics = state.topics.filter(t => t.category === catId);
+  const completedIds = window.Progress ? window.Progress.completedIds() : new Set();
+  
   contentEl.innerHTML = `
     <div class="crumb"><a href="#/">Home</a><span class="sep">/</span>${cat.label}</div>
     <h1 style="font-family:var(--font-display);">${cat.label}</h1>
+    <p style="color:var(--text-muted); margin-bottom:20px;">${topics.length} topics in this track</p>
     <div class="cat-grid">
-      ${topics.map(t => `
+      ${topics.map((t, i) => {
+        const isDone = completedIds.has(t.id);
+        return `
         <a class="cat-card" href="#/topic/${t.id}">
-          <h3>${t.title}</h3>
-          <p>${t.summary}</p>
-        </a>`).join("")}
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0;">${t.title}</h3>
+            ${isDone ? '<span style="color:var(--accent); font-size:1.1rem; font-weight:bold;">✓</span>' : `<span style="color:var(--text-faint); font-size:0.8rem;">#${i+1}</span>`}
+          </div>
+          <p style="margin-top:10px;">${t.summary}</p>
+        </a>`;
+      }).join("")}
     </div>`;
   window.scrollTo(0, 0);
 }
@@ -245,10 +315,38 @@ async function renderTopic(id) {
   const prev = state.topics[idx - 1];
   const next = state.topics[idx + 1];
 
+  // Track last visited topic
+  setLastTopic(id, topic.title, cat ? cat.label : '');
+
+  // Estimate reading time
+  const wordCount = (topic.content || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const readMins = Math.max(1, Math.round(wordCount / 200));
+
+  // Related topics (same category)
+  const related = state.topics.filter(t => t.category === topic.category && t.id !== id).slice(0, 4);
+  const relatedHtml = related.length ? `
+    <div class="related-topics-section">
+      <h3>Related topics in ${cat ? cat.label : 'this track'}</h3>
+      <div class="related-grid">
+        ${related.map(t => `
+          <a class="related-card" href="#/topic/${t.id}">
+            <div class="related-card-title">${t.title}</div>
+            <div class="related-card-cat">${escapeHtml((t.summary||'').slice(0,60))}${(t.summary||'').length>60?'...':''}</div>
+          </a>`).join('')}
+      </div>
+    </div>` : '';
+
+  const codeHtml = topic.code && topic.code.js ? `
+    <h3 style="font-family:var(--font-display); margin-top:30px;">Reference implementation</h3>
+    <div class="code-block-wrap">
+      <pre class="slide-code"><code id="refCode">${highlightJS(topic.code.js)}</code></pre>
+      <button class="copy-code-btn" id="copyCodeBtn" type="button">Copy</button>
+    </div>` : '';
+
   contentEl.innerHTML = `
     <div class="topic-header">
       <div class="crumb"><a href="#/">Home</a><span class="sep">/</span><a href="#/category/${topic.category}">${cat ? cat.label : ""}</a></div>
-      <h1>${topic.title}</h1>
+      <h1>${topic.title} <span class="reading-time-badge">⏱ ${readMins} min read</span></h1>
       <p class="summary">${topic.summary}</p>
       <div class="topic-actions">
         <button class="action-btn bookmark-btn ${Progress.isBookmarked(id) ? "active" : ""}" id="bookmarkBtn" type="button">
@@ -273,12 +371,9 @@ async function renderTopic(id) {
       </div>
     </div>
 
-    <article class="topic-body">${topic.content}</article>
+    <article class="topic-body" id="topicBody">${topic.content}</article>
 
-    ${topic.code && topic.code.js ? `
-      <h3 style="font-family:var(--font-display); margin-top:30px;">Reference implementation</h3>
-      <pre class="slide-code"><code>${highlightJS(topic.code.js)}</code></pre>
-    ` : ""}
+    ${codeHtml}
 
     ${topic.practice && topic.practice.length ? `
       <div class="practice-section">
@@ -292,16 +387,45 @@ async function renderTopic(id) {
 
     <div id="editorHost"></div>
 
+    ${relatedHtml}
+
     <div class="topic-pager">
       ${prev ? `<a class="pager-btn prev" href="#/topic/${prev.id}"><div class="pg-label">← Previous</div><div class="pg-title">${prev.title}</div></a>` : `<span></span>`}
       ${next ? `<a class="pager-btn next" href="#/topic/${next.id}"><div class="pg-label">Next →</div><div class="pg-title">${next.title}</div></a>` : `<span></span>`}
     </div>
   `;
 
+  // Auto-generate TOC from h3 headings
+  const headings = contentEl.querySelectorAll('#topicBody h3');
+  if (headings.length >= 2) {
+    headings.forEach((h, i) => { h.id = `toc-${i}`; });
+    const tocHtml = `
+      <nav class="toc-panel" aria-label="Table of contents">
+        <div class="toc-panel-title">📖 Contents</div>
+        <ul class="toc-list">
+          ${[...headings].map((h, i) => `<li><a href="#toc-${i}">${h.textContent}</a></li>`).join('')}
+        </ul>
+      </nav>`;
+    contentEl.querySelector('#topicBody').insertAdjacentHTML('beforebegin', tocHtml);
+  }
+
+  // Copy code button
+  const copyBtn = document.getElementById('copyCodeBtn');
+  if (copyBtn && topic.code && topic.code.js) {
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(topic.code.js).then(() => {
+        copyBtn.textContent = '✓ Copied!';
+        copyBtn.classList.add('copied');
+        setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+      }).catch(() => {});
+    });
+  }
+
   document.getElementById("bookmarkBtn").addEventListener("click", (e) => {
     const active = Progress.toggleBookmark(id);
     e.target.classList.toggle("active", active);
     e.target.textContent = active ? "★ Saved" : "☆ Save for later";
+    if (active && window.XP) { XP.earn('bookmark', id); showXpPop('+2 XP'); }
   });
   document.getElementById("completeBtn").addEventListener("click", (e) => {
     const active = Progress.toggleComplete(id);
@@ -309,6 +433,11 @@ async function renderTopic(id) {
     e.target.textContent = active ? "✓ Completed" : "Mark as complete";
     const sidebarLink = sidebarContentEl.querySelector(`a[data-topic="${id}"]`);
     if (sidebarLink) sidebarLink.classList.toggle("is-complete", active);
+    if (active) {
+      if (window.XP) { XP.earn('topic', id); showXpPop('+10 XP'); }
+      launchConfetti();
+      showToast('Topic completed! 🎉', 'success');
+    }
   });
 
   // Diagram
@@ -330,6 +459,7 @@ async function renderTopic(id) {
   highlightSidebar("topic", id);
   window.scrollTo(0, 0);
 }
+
 
 function renderDial(host, scaleIndex) {
   const scale = state.scale && state.scale.length ? state.scale : ["O(1)","O(log n)","O(n)","O(n log n)","O(n^2)","O(2^n)","O(n!)"];
@@ -562,7 +692,29 @@ async function renderDashboard() {
   const diff = stats.difficulties || { easy: {total:0,solved:0}, medium: {total:0,solved:0}, hard: {total:0,solved:0} };
   const totalProblems = stats.totalProblems || (diff.easy.total + diff.medium.total + diff.hard.total);
 
+  // XP level section
+  const xpTotal = window.XP ? XP.getTotal() : 0;
+  const xpLevel = window.XP ? XP.getLevel(xpTotal) : { title: 'Novice', icon: '🌱', color: '#8B90AA' };
+  const xpNext = window.XP ? XP.getNextLevel(xpTotal) : null;
+  const xpPct = window.XP ? Math.round(XP.getLevelProgress(xpTotal) * 100) : 0;
+
   contentEl.innerHTML = `
+    <!-- XP Level Section -->
+    <div class="xp-level-section">
+      <div class="xp-level-header">
+        <div class="xp-level-badge">
+          <span class="xp-level-icon">${xpLevel.icon}</span>
+          <div>
+            <div class="xp-level-name" style="color:${xpLevel.color}">${xpLevel.title}</div>
+            <div class="xp-level-total">${xpTotal} XP total</div>
+          </div>
+        </div>
+        ${xpNext ? `<span style="font-size:0.78rem; color:var(--text-faint)">${xpNext.min - xpTotal} XP to ${xpNext.icon} ${xpNext.title}</span>` : '<span style="font-size:0.78rem;color:var(--accent)">🏆 Max Level!</span>'}
+      </div>
+      <div class="xp-level-bar-wrap"><div class="xp-level-bar-fill" style="width:${xpPct}%"></div></div>
+      <div class="xp-level-sub"><span>Level progress</span><span>${xpPct}%</span></div>
+    </div>
+
     <!-- Profile Header -->
     <div class="lc-profile-header">
       <div class="lc-profile-left">
@@ -799,8 +951,7 @@ async function renderDashboard() {
 
   // --- Event Listeners ---
   document.getElementById("signOutBtn").addEventListener("click", () => {
-    Auth.signOut();
-    window.location.href = "/login.html?reason=signed_out";
+    window.location.href = "/";
   });
   document.getElementById("editProfileBtn").addEventListener("click", () => {
     const panel = document.getElementById("editProfilePanel");
@@ -823,7 +974,7 @@ async function renderDashboard() {
     try {
       await Auth.updateProfile({ name, email, github, linkedin, leetcode, avatar: selectedAvatar });
       showToast("Profile updated successfully!", "success");
-      renderDashboard(); wireAuthArea();
+      renderDashboard();
     } catch (err) {
       showToast(err.message, "error");
     }
@@ -838,7 +989,7 @@ async function renderProblemsList() {
   contentEl.innerHTML = `<p style="color:var(--text-muted);">Loading problems…</p>`;
   const res = await fetch("/api/problems");
   const data = await res.json();
-  const solved = window.Auth && Auth.isSignedIn() ? (Auth.getUser()?.progress?.solvedProblems || []) : [];
+  const solved = [];
 
   const easyCount = data.problems.filter(p => p.difficulty.toLowerCase() === 'easy').length;
   const mediumCount = data.problems.filter(p => p.difficulty.toLowerCase() === 'medium').length;
@@ -1024,110 +1175,25 @@ function wireTheme() {
   });
 }
 
-// ---------------- Auth area (topbar) + modal ----------------
-
-function wireAuthArea() {
-  const area = document.getElementById("authArea");
-  if (!window.Auth || !Auth.isSignedIn()) {
-    area.innerHTML = `<button class="auth-signin-btn" id="topbarSignInBtn" type="button">Sign In</button>`;
-    document.getElementById("topbarSignInBtn").addEventListener("click", () => openAuthModal("login"));
-    return;
-  }
-  const user = Auth.getUser();
-  area.innerHTML = `<a class="user-chip" href="#/dashboard"><span class="avatar-circle">${user.avatar || "🧑‍💻"}</span><span>${(user.name || "").split(" ")[0]}</span></a>`;
-}
-
-function openAuthModal(tab) {
-  const backdrop = document.getElementById("authModalBackdrop");
-  backdrop.classList.remove("hidden");
-  switchAuthTab(tab || "login");
-}
-function closeAuthModal() {
-  document.getElementById("authModalBackdrop").classList.add("hidden");
-  document.getElementById("authError").classList.add("hidden");
-  document.getElementById("authForm").reset();
-}
-function switchAuthTab(tab) {
-  document.querySelectorAll(".auth-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  document.getElementById("nameRow").style.display = tab === "register" ? "flex" : "none";
-  document.getElementById("authModalTitle").textContent = tab === "register" ? "Create your account" : "Welcome back";
-  document.getElementById("authSubmitBtn").textContent = tab === "register" ? "Create account" : "Sign In";
-  document.getElementById("authForm").dataset.mode = tab;
-  document.getElementById("authError").classList.add("hidden");
-}
-
-function wireAuthModal() {
-  document.getElementById("authModalClose").addEventListener("click", closeAuthModal);
-  document.getElementById("authModalBackdrop").addEventListener("click", (e) => {
-    if (e.target.id === "authModalBackdrop") closeAuthModal();
-  });
-  document.querySelectorAll(".auth-tab").forEach(tab => {
-    tab.addEventListener("click", () => switchAuthTab(tab.dataset.tab));
-  });
-
-  document.getElementById("authForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const mode = e.target.dataset.mode || "login";
-    const errBox = document.getElementById("authError");
-    errBox.classList.add("hidden");
-    const email = document.getElementById("authEmail").value.trim();
-    const password = document.getElementById("authPassword").value;
-    const name = document.getElementById("authName").value.trim();
-    try {
-      if (mode === "register") await Auth.register({ name, email, password });
-      else await Auth.login({ email, password });
-      closeAuthModal();
-      wireAuthArea();
-      route();
-    } catch (err) {
-      errBox.textContent = err.message;
-      errBox.classList.remove("hidden");
-    }
-  });
-
-  initGoogleButton();
-}
-
-async function initGoogleButton() {
-  const host = document.getElementById("googleSignInHost");
-  const config = await Auth.fetchGoogleConfig();
-  if (!config.googleEnabled) {
-    host.innerHTML = `<div class="google-signin-fallback">Sign in with Google isn't configured on this server yet — see README.md to enable it.</div>`;
-    return;
-  }
-  const script = document.createElement("script");
-  script.src = "https://accounts.google.com/gsi/client";
-  script.async = true;
-  script.onload = () => {
-    google.accounts.id.initialize({
-      client_id: config.googleClientId,
-      callback: async (response) => {
-        try {
-          await Auth.loginWithGoogleIdToken(response.credential);
-          closeAuthModal(); wireAuthArea(); route();
-        } catch (err) {
-          const errBox = document.getElementById("authError");
-          errBox.textContent = err.message; errBox.classList.remove("hidden");
-        }
-      }
-    });
-    google.accounts.id.renderButton(host, { theme: "outline", size: "large", width: 320 });
-  };
-  document.head.appendChild(script);
-}
 
 // ---------------- Keyboard shortcuts ----------------
 
 function handleGlobalKeydown(e) {
   const tag = (document.activeElement && document.activeElement.tagName) || "";
   const typing = tag === "INPUT" || tag === "TEXTAREA";
+  // Ctrl+K or Cmd+K → open command palette
+  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
   if (e.key === "/" && !typing) {
     e.preventDefault();
-    document.getElementById("searchInput").focus();
+    openCommandPalette();
   } else if (e.key === "Escape") {
     document.getElementById("searchResults").classList.add("hidden");
+    closeCommandPalette();
     closeMobileSidebar();
-    if (!document.getElementById("authModalBackdrop").classList.contains("hidden")) closeAuthModal();
     if (typing) document.activeElement.blur();
   }
 }
@@ -1136,4 +1202,225 @@ function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-boot();
+// ---- XP Chip ----
+function wireXpChip() {
+  const host = document.getElementById('xpChipHost');
+  if (!host || !window.XP) return;
+  host.innerHTML = XP.renderChip();
+}
+
+// ---- Scroll Progress Bar ----
+function wireScrollProgress() {
+  const bar = document.getElementById('scrollProgress');
+  if (!bar) return;
+  window.addEventListener('scroll', () => {
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = scrollable > 0 ? window.scrollY / scrollable : 0;
+    bar.style.transform = `scaleX(${pct})`;
+  }, { passive: true });
+}
+
+// ---- Scroll To Top ----
+function wireScrollToTop() {
+  const btn = document.getElementById('scrollToTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+// ---- Command Palette ----
+let cmdPaletteOpen = false;
+let cmdFocusedIndex = -1;
+
+function openCommandPalette() {
+  const pal = document.getElementById('cmdPalette');
+  const inp = document.getElementById('cmdInput');
+  if (!pal) return;
+  cmdPaletteOpen = true;
+  pal.classList.add('open');
+  inp.value = '';
+  cmdFocusedIndex = -1;
+  renderCmdResults('');
+  setTimeout(() => inp.focus(), 50);
+}
+
+function closeCommandPalette() {
+  const pal = document.getElementById('cmdPalette');
+  if (!pal) return;
+  cmdPaletteOpen = false;
+  pal.classList.remove('open');
+}
+
+function renderCmdResults(query) {
+  const host = document.getElementById('cmdResults');
+  if (!host) return;
+  const q = query.toLowerCase().trim();
+
+  const topicResults = state.topics.filter(t =>
+    t.title.toLowerCase().includes(q) || (t.summary||'').toLowerCase().includes(q)
+  ).slice(0, 5);
+
+  const patternResults = state.patterns.filter(p =>
+    p.title.toLowerCase().includes(q) || (p.tagline||'').toLowerCase().includes(q)
+  ).slice(0, 3);
+
+  if (!q && topicResults.length === 0 && patternResults.length === 0) {
+    host.innerHTML = `<div class="cmd-empty">Start typing to search topics, patterns &amp; problems…</div>`;
+    return;
+  }
+
+  let html = '';
+  if (topicResults.length) {
+    html += `<div class="cmd-section-label">Topics</div>`;
+    html += topicResults.map(t => `
+      <div class="cmd-item" data-href="#/topic/${t.id}" tabindex="-1">
+        <span class="cmd-item-icon topic">📚</span>
+        <div><div class="cmd-item-title">${t.title}</div><div class="cmd-item-sub">${(t.summary||'').slice(0,60)}</div></div>
+      </div>`).join('');
+  }
+  if (patternResults.length) {
+    html += `<div class="cmd-section-label">Patterns</div>`;
+    html += patternResults.map(p => `
+      <div class="cmd-item" data-href="#/pattern/${p.id}" tabindex="-1">
+        <span class="cmd-item-icon pattern">⚡</span>
+        <div><div class="cmd-item-title">${p.title}</div><div class="cmd-item-sub">${p.tagline||''}</div></div>
+      </div>`).join('');
+  }
+  if (!html) {
+    html = `<div class="cmd-empty">No results for "<strong>${escapeHtml(query)}</strong>"</div>`;
+  }
+  host.innerHTML = html;
+  cmdFocusedIndex = -1;
+
+  host.querySelectorAll('.cmd-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const href = item.dataset.href;
+      if (href) window.location.hash = href.replace('#', '');
+      closeCommandPalette();
+    });
+  });
+}
+
+function wireCommandPalette() {
+  const pal = document.getElementById('cmdPalette');
+  const inp = document.getElementById('cmdInput');
+  const host = document.getElementById('cmdResults');
+  if (!pal || !inp) return;
+
+  pal.addEventListener('click', (e) => {
+    if (e.target === pal) closeCommandPalette();
+  });
+
+  inp.addEventListener('input', () => renderCmdResults(inp.value));
+
+  inp.addEventListener('keydown', (e) => {
+    const items = host ? [...host.querySelectorAll('.cmd-item')] : [];
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      cmdFocusedIndex = Math.min(cmdFocusedIndex + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('focused', i === cmdFocusedIndex));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      cmdFocusedIndex = Math.max(cmdFocusedIndex - 1, 0);
+      items.forEach((el, i) => el.classList.toggle('focused', i === cmdFocusedIndex));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (cmdFocusedIndex >= 0 && items[cmdFocusedIndex]) {
+        const href = items[cmdFocusedIndex].dataset.href;
+        if (href) window.location.hash = href.replace('#', '');
+        closeCommandPalette();
+      }
+    } else if (e.key === 'Escape') {
+      closeCommandPalette();
+    }
+  });
+}
+
+// ---- Daily Tip Rotation ----
+const DSA_TIPS = [
+  "Always clarify constraints before writing code in an interview.",
+  "Two Pointers can reduce O(n²) nested loops to O(n) for sorted arrays.",
+  "BFS is best for shortest path in unweighted graphs; Dijkstra for weighted.",
+  "Memoization = top-down DP. Tabulation = bottom-up DP. Both are valid.",
+  "Sliding Window avoids recomputing overlapping sub-arrays — think O(n) not O(n²).",
+  "Hash Maps give O(1) average lookup. Use them to trade memory for speed.",
+  "Recursion always has a call-stack cost. Consider iteration for deep trees.",
+  "Binary Search works on any monotonic function, not just sorted arrays.",
+  "Heaps (priority queues) are the go-to for 'top K elements' problems.",
+  "Union-Find (Disjoint Set) is perfect for cycle detection and connected components.",
+  "Think about edge cases: empty input, single element, duplicates, overflow.",
+  "Start with brute force, then optimize. Never start with the optimal solution.",
+];
+
+let tipTimer = null;
+function wireDailyTip() {
+  const host = document.getElementById('sidebarTipHost');
+  if (!host) return;
+  let idx = Math.floor(Math.random() * DSA_TIPS.length);
+  const render = () => {
+    host.innerHTML = `<div class="sidebar-tip"><strong>💡 DSA Tip</strong>${DSA_TIPS[idx]}</div>`;
+    idx = (idx + 1) % DSA_TIPS.length;
+  };
+  render();
+  if (tipTimer) clearInterval(tipTimer);
+  tipTimer = setInterval(render, 30000);
+}
+
+// ---- Confetti ----
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const pieces = [];
+  const COLORS = ['#E8A33D','#3DDBD9','#6FCF97','#E85DA8','#9D8CFF','#FFD700'];
+  for (let i = 0; i < 120; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 200,
+      w: 6 + Math.random() * 8,
+      h: 10 + Math.random() * 10,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      rot: Math.random() * Math.PI * 2,
+      vx: (Math.random() - 0.5) * 3,
+      vy: 2 + Math.random() * 4,
+      vr: (Math.random() - 0.5) * 0.2,
+    });
+  }
+  let frame;
+  const draw = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    for (const p of pieces) {
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vy += 0.05;
+      if (p.y < canvas.height + 20) alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - p.y / canvas.height);
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (alive) frame = requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  if (frame) cancelAnimationFrame(frame);
+  draw();
+}
+
+// ---- XP Popup ----
+function showXpPop(text) {
+  const el = document.createElement('div');
+  el.className = 'xp-earned-pop';
+  el.textContent = text;
+  el.style.left = (window.innerWidth / 2 - 30) + 'px';
+  el.style.top = (window.innerHeight * 0.4) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+boot();

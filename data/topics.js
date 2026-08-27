@@ -42,7 +42,9 @@ const TOPICS = [
         <li><strong>Searching & sorting</strong> &mdash; the most reused algorithmic patterns in all of computing.</li>
         <li><strong>Trees, graphs</strong> &mdash; non-linear structures for hierarchies and networks.</li>
         <li><strong>Dynamic programming & advanced topics</strong> &mdash; optimization techniques for the hardest problems.</li>
-      </ul>`,
+      </ul>
+      <h3>What is an Algorithm?</h3>
+      <p>An algorithm is simply a step-by-step procedure to solve a problem. Think of it like a recipe. The better the recipe, the faster you get the result.</p>`,
     code: {
       js: `// Same problem, two data structures, two costs\nfunction linearFind(arr, target) {\n  for (let i = 0; i < arr.length; i++) {\n    if (arr[i] === target) return i;\n  }\n  return -1;\n}\n\nconsole.log(linearFind([5, 3, 8, 1, 9], 8));`,
     }

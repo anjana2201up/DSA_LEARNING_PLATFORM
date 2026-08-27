@@ -62,5 +62,7 @@ const Progress = (() => {
   };
 })();
 
+window.Progress = Progress;
+
 // Apply theme as early as possible (before first paint) to avoid a flash.
 Progress.applyStoredTheme();
