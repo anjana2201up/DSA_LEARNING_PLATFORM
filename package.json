@@ -28,5 +28,11 @@
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "files": ["server.js", "data", "public", "middleware", "lib"],
+"repository": {
+  "type": "git",
+  "url": "git+https://github.com/anjana2201up/DSA_LEARNING_PLATFORM.git"
+},
+"publishConfig": { "access": "public" }
 }
